@@ -1,6 +1,5 @@
-import Hero from "./components/hero";
-import { HeaderNavigationBase } from "./components/application/app-navigation/header-navigation";
-import { CategoryRender } from "./components/category-render";
+import { CategoryRender } from "../components/category-render";
+import { HeaderNavigationBase } from "../components/application/app-navigation/header-navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +12,10 @@ const navItems = [
 	{ label: "Contact", href: "/contactus" },
 ];
 
-export default function Home() {
+export default function CoursesPage() {
 	return (
-		<div>
-			<HeaderNavigationBase items={navItems} activeUrl="/" />
-			<Hero />
+		<div className="min-h-screen bg-[#f8fafc]">
+			<HeaderNavigationBase items={navItems} activeUrl="/courses" />
 			<CategoryRender />
 		</div>
 	);
