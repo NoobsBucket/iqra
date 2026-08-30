@@ -25,11 +25,26 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 				const response = await fetch(`${API_BASE_URL}/v1/auth/login`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
+					credentials: "include",
 					body: JSON.stringify({ email, password }),
 				});
 
-				if (!response.ok) {
-					const apiError = await getApiError(response, "Login failed");
+				const loginResult = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+				const loginMessage =
+					typeof loginResult.message === "string"
+						? loginResult.message
+						: typeof loginResult.error === "string"
+							? loginResult.error
+							: "";
+				const nestedUser = (loginResult.user as Record<string, unknown> | undefined) ?? loginResult;
+				const role = typeof nestedUser.role === "string" ? nestedUser.role.toLowerCase() : "user";
+				const loginFailed =
+					Boolean(loginResult.success === false) ||
+					/invalid|incorrect|wrong|failed|not found|unauthorized/i.test(loginMessage) ||
+					(!response.ok && !/verify.*email|email.*verify/i.test(loginMessage));
+
+				if (!response.ok || loginFailed) {
+					const apiError = await getApiError(response, loginMessage || "Login failed");
 					const verificationError = /verify.*email|email.*verify/i.test(apiError.message);
 
 					if (verificationError) {
@@ -47,28 +62,33 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 					throw apiError;
 				}
 
-				const loginResult = (await response.json()) as Record<string, unknown>;
 				const user = (loginResult.user as Record<string, unknown> | undefined) ?? loginResult;
 				const userId = user.id ?? user.uuid ?? user.user_id ?? loginResult.user_id;
+				if (!userId && !loginResult.token && !loginResult.access_token && !loginResult.session) {
+					throw new Error("Login response was incomplete.");
+				}
+
 				if (userId) {
-					localStorage.setItem(
-						"iqra-user",
-						JSON.stringify({
-							id: String(userId),
-							name: String(user.name ?? user.full_name ?? user.username ?? user.email ?? "Account"),
-							email: typeof user.email === "string" ? user.email : "",
-							avatar:
-								typeof user.avatar_url === "string"
-									? user.avatar_url
-									: typeof user.avatar === "string"
-										? user.avatar
-										: typeof user.profile_image === "string"
-											? user.profile_image
-											: typeof user.profile_picture === "string"
-												? user.profile_picture
-												: undefined,
-						}),
-					);
+					const authUser = {
+						id: String(userId),
+						name: String(user.name ?? user.full_name ?? user.username ?? user.email ?? "Account"),
+						email: typeof user.email === "string" ? user.email : "",
+						avatar:
+							typeof user.avatar_url === "string"
+								? user.avatar_url
+								: typeof user.avatar === "string"
+									? user.avatar
+									: typeof user.profile_image === "string"
+										? user.profile_image
+										: typeof user.profile_picture === "string"
+											? user.profile_picture
+											: undefined,
+						role: role,
+					};
+
+					localStorage.setItem("iqra-user", JSON.stringify(authUser));
+					const secure = window.location.protocol === "https:" ? "; Secure" : "";
+					document.cookie = `iqra-role=${encodeURIComponent(role)}; path=/; SameSite=Lax${secure}`;
 					window.dispatchEvent(new Event("iqra-user-changed"));
 				}
 
@@ -80,6 +100,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 			const response = await fetch(`${API_BASE_URL}/v1/auth/register`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				credentials: "include",
 				body: JSON.stringify({ name, email, password }),
 			});
 

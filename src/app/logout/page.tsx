@@ -11,10 +11,19 @@ export default function LogoutPage() {
       localStorage.removeItem("iqra-user");
       window.dispatchEvent(new Event("iqra-user-changed"));
 
+      document.cookie.split(";").forEach((cookie) => {
+        const eq = cookie.indexOf("=");
+        const name = eq > -1 ? cookie.slice(0, eq).trim() : cookie.trim();
+        if (!name) return;
+
+        document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax; ${window.location.protocol === "https:" ? "Secure;" : ""}`;
+      });
+
       try {
         const response = await fetch(`${API_BASE_URL}/v1/auth/logout`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
         });
 
         if (!response.ok) throw new Error("Logout failed");

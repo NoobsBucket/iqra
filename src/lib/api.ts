@@ -1,15 +1,15 @@
 import categoriesFallback from "@/app/api/category.json";
 import productsFallback from "@/app/api/product.json";
 
-// The upstream is HTTP with a self-signed HTTPS certificate. Keep it server-side
-// and use the same-origin proxy from browser components to avoid mixed content.
-export const UPSTREAM_API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://ndpziuqvqvw5vvxpgw1l9ukr.169.58.214.134.sslip.io";
+// Point all server and proxy requests at the backend base URL so avatar/image
+// endpoints resolve correctly. Keep browser requests going through the same-origin
+// proxy to avoid mixed-content issues.
+export const UPSTREAM_API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
 
 export const API_BASE_URL = "/api/proxy";
 
 function getServerApiBaseUrl(): string {
-  return (process.env.NEXT_PUBLIC_API_BASE_URL ?? UPSTREAM_API_BASE_URL).replace(/\/$/, "");
+  return UPSTREAM_API_BASE_URL;
 }
 
 export async function getApiError(response: Response, fallback: string): Promise<Error> {
