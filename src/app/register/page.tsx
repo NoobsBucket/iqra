@@ -1,14 +1,36 @@
 import Link from "next/link";
-import { AuthShell } from "../components/auth-shell";
+import { HeaderNavigationBase } from "../components/application/app-navigation/header-navigation";
 import { RegisterForm } from "../components/register-form";
+
+const navItems = [
+	{ label: "Home", href: "/" },
+	{ label: "About", href: "/aboutus" },
+	{ label: "Courses", href: "/courses" },
+	{ label: "Pricing", href: "/pricing" },
+	{ label: "Blog", href: "/blog" },
+	{ label: "Contact", href: "/contactus" },
+];
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ course?: string | string[] }> }) {
 	const params = await searchParams;
 	const selectedCourse = typeof params.course === "string" ? params.course : undefined;
 
 	return (
-		<AuthShell title="Register for a course" description="Choose your course, share your details, and take the next step with our learning community." footer={<>Already registered? <Link href="/login" className="font-bold text-blue-700 hover:text-blue-800">Log in</Link></>}>
-			<RegisterForm selectedCourse={selectedCourse} />
-		</AuthShell>
+		<div className="min-h-screen bg-[#f7faf8] text-slate-900" style={{ fontFamily: "var(--font-jost), sans-serif" }}>
+			<HeaderNavigationBase items={navItems} activeUrl="/courses" />
+			<main className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-16">
+				<div className="mb-8 text-center md:text-left">
+					<p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Course registration</p>
+					<h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">Enroll in your dedicated course</h1>
+					<p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+						Choose the learning path you want, tell us who you are, and we’ll record your enrollment against the live course catalogue.
+					</p>
+				</div>
+				<RegisterForm selectedCourse={selectedCourse} />
+				<div className="mt-8 text-center text-sm text-slate-600">
+					Already enrolled? <Link href="/login" className="font-bold text-teal-700 hover:text-teal-800">Log in</Link>
+				</div>
+			</main>
+		</div>
 	);
 }

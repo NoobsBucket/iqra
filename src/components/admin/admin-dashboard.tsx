@@ -44,6 +44,10 @@ async function apiRequest<T>(path: string, method = "GET", body?: unknown): Prom
   return text ? (JSON.parse(text) as T) : ({} as T);
 }
 
+function asArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
 export function AdminDashboard() {
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [courses, setCourses] = useState<CourseRecord[]>([]);
@@ -65,15 +69,17 @@ export function AdminDashboard() {
         apiRequest<CourseRecord[]>("/v1/courses"),
       ]);
 
-      setCategories(categoryData);
-      setCourses(courseData);
-      setSelectedCourseId((current) => current || courseData[0]?.id || "");
+      const safeCategories = asArray(categoryData);
+      const safeCourses = asArray(courseData);
+      setCategories(safeCategories);
+      setCourses(safeCourses);
+      setSelectedCourseId((current) => current || safeCourses[0]?.id || "");
 
-      if (courseData[0]?.id) {
-        const lessonData = await apiRequest<LessonRecord[]>(`/v1/courses/${courseData[0].id}/lessons`);
-        setLessons(lessonData);
-        const enrollmentData = await apiRequest<EnrollmentRecord[]>(`/v1/courses/${courseData[0].id}/enrollments`);
-        setEnrollments(enrollmentData);
+      if (safeCourses[0]?.id) {
+        const lessonData = await apiRequest<LessonRecord[]>(`/v1/courses/${safeCourses[0].id}/lessons`);
+        setLessons(asArray(lessonData));
+        const enrollmentData = await apiRequest<EnrollmentRecord[]>(`/v1/courses/${safeCourses[0].id}/enrollments`);
+        setEnrollments(asArray(enrollmentData));
       }
     } catch {
       setMessage("The live API is unavailable right now. The dashboard is ready for local use once the backend responds.");
@@ -92,9 +98,9 @@ export function AdminDashboard() {
     const loadLessons = async () => {
       try {
         const lessonData = await apiRequest<LessonRecord[]>(`/v1/courses/${selectedCourseId}/lessons`);
-        setLessons(lessonData);
+        setLessons(asArray(lessonData));
         const enrollmentData = await apiRequest<EnrollmentRecord[]>(`/v1/courses/${selectedCourseId}/enrollments`);
-        setEnrollments(enrollmentData);
+        setEnrollments(asArray(enrollmentData));
       } catch {
         setLessons([]);
         setEnrollments([]);

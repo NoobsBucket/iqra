@@ -22,7 +22,7 @@ const jost = Jost({
 
 export const metadata: Metadata = {
 	title: "Iqra international",
-	description: "The best online Islamic courses for learning Quran, Hadith, Fiqh, and more. Structured learning paths designed for steady progress.",
+	description: "Learn Quranic and Islamic studies through structured online courses.",
 };
 
 export default function RootLayout({
