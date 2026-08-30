@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, DEFAULT_SETTINGS, type SettingsRecord } from "@/lib/api";
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({ site_name: "Iqra Platform", site_email: "info@iqra.com", site_phone: "+923001234567" });
+  const [settings, setSettings] = useState<SettingsRecord>({ ...DEFAULT_SETTINGS });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,17 +13,9 @@ export default function SettingsPage() {
       try {
         const response = await fetch(`${API_BASE_URL}/v1/settings`);
         if (!response.ok) throw new Error("Failed to load settings");
-        const data = (await response.json()) as {
-          site_name?: string;
-          site_email?: string;
-          site_phone?: string;
-        };
+        const data = (await response.json()) as SettingsRecord;
 
-        setSettings({
-          site_name: data.site_name ?? "Iqra Platform",
-          site_email: data.site_email ?? "info@iqra.com",
-          site_phone: data.site_phone ?? "+923001234567",
-        });
+        setSettings({ ...DEFAULT_SETTINGS, ...data });
       } catch {
         setError("Settings API not reachable right now. Showing default values.");
       } finally {
@@ -39,7 +31,7 @@ export default function SettingsPage() {
       const response = await fetch(`${API_BASE_URL}/v1/settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({ ...DEFAULT_SETTINGS, ...settings }),
       });
 
       if (!response.ok) throw new Error("Save failed");

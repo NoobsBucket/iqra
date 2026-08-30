@@ -6,6 +6,7 @@ export type AuthUser = {
     id: string;
     name: string;
     email: string;
+    avatar?: string;
 };
 
 const AuthUserContext = createContext<AuthUser | null>(null);

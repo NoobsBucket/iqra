@@ -9,7 +9,7 @@ const navItems = [
 
 export default function AdminPage() {
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100 [font-family:var(--font-jost),sans-serif]">
       <HeaderNavigationBase items={navItems} activeUrl="/admin" />
       <AdminDashboard />
     </div>

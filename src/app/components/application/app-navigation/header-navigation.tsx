@@ -1,17 +1,16 @@
 "use client";
 
-import { type FC, type ReactNode } from "react";
-import { Bell01, LifeBuoy01, SearchLg, Settings01 } from "@untitledui/icons";
+import { type FC, type ReactNode, useEffect, useState } from "react";
+import { SearchLg } from "@untitledui/icons";
 import { TabList, Tabs } from "@/app/components/application/tabs/tabs";
-import { BadgeWithDot } from "@/app/components/base/badges/badges";
 import { DropdownAccountButton } from "@/app/components/base/dropdown/dropdown-account-button";
 import { Input } from "@/app/components/base/input/input";
 import { UntitledLogo } from "@/app/components/foundations/logo/untitledui-logo";
+import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
 import { cx } from "@/lib/utils/cx";
 import { MobileNavigationHeader } from "./base-components/mobile-header";
 import { NavAccountCard } from "./base-components/nav-account-card";
 import { NavButton } from "./base-components/nav-button";
-import { NavItemBase } from "./base-components/nav-item";
 import { NavList } from "./base-components/nav-list";
 
 type NavItem = {
@@ -71,24 +70,6 @@ interface HeaderNavigationBaseProps {
 const DefaultActions = ({ activeUrl }: { activeUrl?: string }) => {
     return (
         <>
-            <div className="flex gap-0.5">
-                <NavButton current={activeUrl === "/search"} icon={SearchLg} label="Search" href="/search" tooltipPlacement="bottom" />
-                <NavButton current={activeUrl === "/settings-01"} icon={Settings01} label="Settings" href="/settings-01" tooltipPlacement="bottom" />
-                <div className="relative">
-                    <NavButton
-                        current={activeUrl === "/notifications-01"}
-                        icon={Bell01}
-                        label="Notifications"
-                        href="/notifications-01"
-                        tooltipPlacement="bottom"
-                    />
-
-                    <div className="absolute -top-0.25 -right-0.25 flex size-3.5 items-center justify-center rounded-full bg-fg-error-primary text-[10px] font-bold text-white">
-                        2
-                    </div>
-                </div>
-            </div>
-
             <DropdownAccountButton />
         </>
     );
@@ -103,7 +84,23 @@ export const HeaderNavigationBase = ({
     centered = false,
     secondaryType = "buttons",
 }: HeaderNavigationBaseProps) => {
+    const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
     const isActive = (item: NavItem) => item.current ?? isItemActive(item.href, activeUrl);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        getSettings()
+            .then((settings) => {
+                if (!isMounted) return;
+                setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
+            })
+            .catch(() => undefined);
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const activeParent = items.find((item) => isActive(item) || item.items?.some((sub) => isItemActive(sub.href, activeUrl)));
     const activeSubNavItems = subItems || activeParent?.items;
@@ -134,27 +131,6 @@ export const HeaderNavigationBase = ({
                     <NavList items={items} />
 
                     <div className="mt-auto flex flex-col gap-3 p-4">
-                        <div className="flex flex-col">
-                            <NavItemBase type="link" href="#" icon={LifeBuoy01}>
-                                Support
-                            </NavItemBase>
-                            <NavItemBase
-                                type="link"
-                                href="#"
-                                icon={Settings01}
-                                badge={
-                                    <BadgeWithDot color="success" type="modern" size="sm">
-                                        Online
-                                    </BadgeWithDot>
-                                }
-                            >
-                                Settings
-                            </NavItemBase>
-                            <NavItemBase type="link" href="https://www.untitledui.com/" icon={Settings01}>
-                                Open in browser
-                            </NavItemBase>
-                        </div>
-
                         <NavAccountCard />
                     </div>
                 </aside>
@@ -171,7 +147,10 @@ export const HeaderNavigationBase = ({
                                 href="/"
                                 className="rounded-xs outline-focus-ring focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
-                                <UntitledLogo className="h-6" />
+                                <div className="flex items-center gap-3">
+                                    <UntitledLogo className="h-6" />
+                                    <span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">{siteName}</span>
+                                </div>
                             </a>
                         </div>
 

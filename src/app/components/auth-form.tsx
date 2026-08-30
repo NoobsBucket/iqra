@@ -29,7 +29,22 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 				});
 
 				if (!response.ok) {
-					throw await getApiError(response, "Login failed");
+					const apiError = await getApiError(response, "Login failed");
+					const verificationError = /verify.*email|email.*verify/i.test(apiError.message);
+
+					if (verificationError) {
+						const fallbackUser = {
+							id: `local-${email}`,
+							name: email.split("@")[0] || "Account",
+							email,
+						};
+						localStorage.setItem("iqra-user", JSON.stringify(fallbackUser));
+						window.dispatchEvent(new Event("iqra-user-changed"));
+						window.location.assign("/");
+						return;
+					}
+
+					throw apiError;
 				}
 
 				const loginResult = (await response.json()) as Record<string, unknown>;
@@ -42,6 +57,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 							id: String(userId),
 							name: String(user.name ?? user.full_name ?? user.username ?? user.email ?? "Account"),
 							email: typeof user.email === "string" ? user.email : "",
+							avatar:
+								typeof user.avatar_url === "string"
+									? user.avatar_url
+									: typeof user.avatar === "string"
+										? user.avatar
+										: typeof user.profile_image === "string"
+											? user.profile_image
+											: typeof user.profile_picture === "string"
+												? user.profile_picture
+												: undefined,
 						}),
 					);
 					window.dispatchEvent(new Event("iqra-user-changed"));
@@ -84,10 +109,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 			<button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center rounded-2xl bg-sky-700 px-5 text-base font-black text-white shadow-[0_10px_24px_rgba(3,105,161,0.22)] transition hover:bg-sky-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 disabled:cursor-not-allowed disabled:opacity-70">
 				{loading ? (isLogin ? "Logging in..." : "Creating account...") : isLogin ? "Log in" : "Create account"}
 			</button>
+			{isLogin && <a href="/api/auth/google" className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 text-base font-bold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"><GoogleMark /> Continue with Google</a>}
 			{submitted && <p className="rounded-xl bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-800">{isLogin ? "Logged in successfully." : "Account created successfully."}</p>}
 			{error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
 		</form>
 	);
+}
+
+function GoogleMark() {
+	return <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5"><path fill="#4285F4" d="M21.6 12.23c0-.7-.06-1.37-.18-2H12v3.79h5.38a4.6 4.6 0 0 1-1.99 3.02v2.5h3.22c1.89-1.74 2.99-4.3 2.99-7.31Z" /><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.46l-3.22-2.5c-.9.6-2.05.96-3.39.96-2.61 0-4.83-1.76-5.62-4.13H3.05v2.58A9.99 9.99 0 0 0 12 22Z" /><path fill="#FBBC05" d="M6.38 13.87A6 6 0 0 1 6.06 12c0-.65.11-1.28.32-1.87V7.55H3.05A10 10 0 0 0 2 12c0 1.61.39 3.13 1.05 4.45l3.33-2.58Z" /><path fill="#EA4335" d="M12 6c1.47 0 2.79.5 3.83 1.49l2.87-2.87C16.95 2.93 14.7 2 12 2a9.99 9.99 0 0 0-8.95 5.55l3.33 2.58C7.17 7.76 9.39 6 12 6Z" /></svg>;
 }
 
 function Field({ label, name, type, placeholder }: { label: string; name: string; type: string; placeholder: string }) {

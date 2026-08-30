@@ -14,6 +14,7 @@ import { useBreakpoint } from "@/hooks/use-breakpoint";
 import { API_BASE_URL } from "@/lib/api";
 import { useAuthUser } from "@/app/components/auth-user-provider";
 import { cx } from "@/lib/utils/cx";
+import { DropdownAccountButton } from "@/app/components/base/dropdown/dropdown-account-button";
 
 export type NavAccountType = {
     /** Unique identifier for the nav item. */
@@ -167,60 +168,5 @@ export const NavAccountCard = ({
     items?: NavAccountType[];
     avatarRounded?: boolean;
 }) => {
-    const triggerRef = useRef<HTMLDivElement>(null);
-    const isDesktop = useBreakpoint("lg");
-    const user = useAuthUser();
-    const account = user
-        ? {
-              id: user.id,
-              name: user.name,
-              email: user.email,
-              avatar: `${API_BASE_URL}/v1/users/${encodeURIComponent(user.id)}/avatar`,
-              status: "online" as const,
-          }
-        : null;
-
-    const accounts = account ? [account] : items;
-    const activeAccountId = account?.id ?? selectedAccountId;
-    const selectedAccount = accounts.find((item) => item.id === activeAccountId);
-
-    if (!selectedAccount) {
-        console.warn(`Account with ID ${selectedAccountId} not found in <NavAccountCard />`);
-        return null;
-    }
-
-    return (
-        <div ref={triggerRef} className="relative flex items-center gap-3 rounded-xl p-3 ring-1 ring-secondary ring-inset">
-            <AvatarLabelGroup
-                size="md"
-                src={selectedAccount.avatar}
-                title={selectedAccount.name}
-                subtitle={selectedAccount.email}
-                status={selectedAccount.status}
-                rounded={avatarRounded}
-            />
-
-            <AriaDialogTrigger>
-                <AriaButton className="absolute top-2 right-2 flex cursor-pointer items-center justify-center rounded-md p-1.5 text-fg-quaternary outline-focus-ring transition duration-100 ease-linear hover:bg-primary_hover hover:text-fg-quaternary_hover focus-visible:outline-2 focus-visible:outline-offset-2 pressed:bg-primary_hover pressed:text-fg-quaternary_hover">
-                    <ChevronSelectorVertical className="size-4 shrink-0 stroke-[2.25px]" />
-                </AriaButton>
-                <AriaPopover
-                    placement={popoverPlacement ?? (isDesktop ? "right bottom" : "top right")}
-                    triggerRef={triggerRef}
-                    offset={8}
-                    className={({ isEntering, isExiting }) =>
-                        cx(
-                            "origin-(--trigger-anchor-point) will-change-transform",
-                            isEntering &&
-                                "duration-150 ease-out animate-in fade-in placement-right:slide-in-from-left-0.5 placement-top:slide-in-from-bottom-0.5 placement-bottom:slide-in-from-top-0.5",
-                            isExiting &&
-                                "duration-100 ease-in animate-out fade-out placement-right:slide-out-to-left-0.5 placement-top:slide-out-to-bottom-0.5 placement-bottom:slide-out-to-top-0.5",
-                        )
-                    }
-                >
-                    <NavAccountMenu selectedAccountId={activeAccountId} accounts={accounts} />
-                </AriaPopover>
-            </AriaDialogTrigger>
-        </div>
-    );
+    return <DropdownAccountButton />;
 };

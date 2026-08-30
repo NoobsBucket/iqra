@@ -1,24 +1,35 @@
 "use client";
 
-import type { PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import { X as CloseIcon, Menu02 } from "@untitledui/icons";
 import { BookOpen, Home, NotebookText, Phone } from "lucide-react";
-import {
-    Button as AriaButton,
-    Dialog as AriaDialog,
-    DialogTrigger as AriaDialogTrigger,
-    Modal as AriaModal,
-    ModalOverlay as AriaModalOverlay,
-} from "react-aria-components";
 import { UntitledLogo } from "@/app/components/foundations/logo/untitledui-logo";
-import { cx } from "@/lib/utils/cx";
+import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
 
 export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
+
+    useEffect(() => {
+        let isMounted = true;
+
+        getSettings()
+            .then((settings) => {
+                if (!isMounted) return;
+                setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
+            })
+            .catch(() => undefined);
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     return (
-        <AriaDialogTrigger>
+        <>
             <header className="relative flex h-16 items-center justify-center border-b border-[#e5e7eb] bg-white px-4 shadow-[0_1px_0_rgba(17,24,39,0.06)] lg:hidden [font-family:var(--font-jost),sans-serif]">
                 <UntitledLogo className="absolute left-4 h-5" />
-                <span className="text-base font-semibold tracking-[0.08em] text-[#111827] uppercase">iqra international</span>
+                <span className="text-base font-semibold uppercase tracking-[0.08em] text-[#111827]">{siteName}</span>
             </header>
 
             <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden [font-family:var(--font-jost),sans-serif]">
@@ -46,43 +57,40 @@ export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
                         <span>Blog</span>
                     </a>
 
-                    <AriaButton
+                    <button
+                        type="button"
                         aria-label="Expand navigation menu"
-                        className="group mx-auto mt-[-0.5rem] flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-full bg-[#0f172a] text-[10px] font-bold tracking-[0.02em] text-white shadow-[0_12px_20px_rgba(15,23,42,0.2)] outline-focus-ring hover:bg-[#1e293b] focus-visible:outline-2 focus-visible:outline-offset-2"
+                        aria-expanded={isMenuOpen}
+                        onClick={() => setIsMenuOpen((value) => !value)}
+                        className="group relative mx-auto mt-[-0.5rem] flex h-14 w-14 flex-col items-center justify-center gap-1 rounded-full bg-[#0f172a] text-[10px] font-bold tracking-[0.02em] text-white shadow-[0_12px_20px_rgba(15,23,42,0.2)] transition hover:bg-[#1e293b] focus-visible:outline-2 focus-visible:outline-offset-2"
                     >
-                        <Menu02 className="size-5 shrink-0 transition duration-200 ease-in-out group-aria-expanded:opacity-0" />
+                        <Menu02 className={`size-5 shrink-0 transition duration-200 ease-in-out ${isMenuOpen ? "opacity-0" : "opacity-100"}`} />
                         <span>Menu</span>
-                        <CloseIcon className="absolute size-4 opacity-0 transition duration-200 ease-in-out group-aria-expanded:opacity-100" />
-                    </AriaButton>
+                        <CloseIcon className={`absolute size-4 transition duration-200 ease-in-out ${isMenuOpen ? "opacity-100" : "opacity-0"}`} />
+                    </button>
                 </div>
             </nav>
 
-            <AriaModalOverlay
-                isDismissable
-                className={({ isEntering, isExiting }) =>
-                    cx(
-                        "fixed inset-0 z-50 cursor-pointer bg-slate-950/20 pr-16 backdrop-blur-sm lg:hidden",
-                        isEntering && "duration-300 ease-in-out animate-in fade-in",
-                        isExiting && "duration-200 ease-in-out animate-out fade-out",
-                    )
-                }
-            >
-                {({ state }) => (
-                    <>
-                        <AriaButton
-                            aria-label="Close navigation menu"
-                            onPress={() => state.close()}
-                            className="fixed top-2.5 right-3 flex cursor-pointer items-center justify-center rounded-full bg-white/90 p-2 text-[#374151] shadow-sm outline-focus-ring hover:bg-white hover:text-[#111827] focus-visible:outline-2 focus-visible:outline-offset-2"
-                        >
-                            <CloseIcon className="size-6" />
-                        </AriaButton>
-
-                        <AriaModal className="w-full max-w-74 cursor-auto will-change-transform [font-family:var(--font-jost),sans-serif]">
-                            <AriaDialog className="h-dvh overflow-hidden rounded-r-3xl border-r border-[#e5e7eb] bg-white shadow-[0_25px_80px_rgba(15,23,42,0.18)] outline-hidden focus:outline-hidden">{children}</AriaDialog>
-                        </AriaModal>
-                    </>
-                )}
-            </AriaModalOverlay>
-        </AriaDialogTrigger>
+            {isMenuOpen && (
+                <div className="fixed inset-0 z-50 bg-slate-950/20 backdrop-blur-sm lg:hidden" onClick={() => setIsMenuOpen(false)}>
+                    <div
+                        className="h-full w-full max-w-[18rem] cursor-auto overflow-hidden rounded-r-3xl border-r border-[#e5e7eb] bg-white shadow-[0_25px_80px_rgba(15,23,42,0.18)]"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="w-full [font-family:var(--font-jost),sans-serif]">
+                            <button
+                                type="button"
+                                aria-label="Close navigation menu"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="fixed right-3 top-2.5 flex cursor-pointer items-center justify-center rounded-full bg-white/90 p-2 text-[#374151] shadow-sm hover:bg-white hover:text-[#111827] focus-visible:outline-2 focus-visible:outline-offset-2"
+                            >
+                                <CloseIcon className="size-6" />
+                            </button>
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };

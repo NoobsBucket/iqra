@@ -60,9 +60,13 @@ export type LessonRecord = {
   title: string;
   description: string;
   video_url?: string;
+  videoUrl?: string;
+  thumbnail_url?: string;
+  thumbnailUrl?: string;
   order_index?: number;
   is_free?: boolean;
   course_id?: string;
+  courseId?: string;
 };
 
 export type ReviewRecord = {
@@ -77,6 +81,7 @@ export type BlogCategoryRecord = {
   id: string;
   name: string;
   description?: string;
+  slug?: string;
 };
 
 export type BlogPostRecord = {
@@ -88,6 +93,13 @@ export type BlogPostRecord = {
   slug?: string;
   category_id?: string;
   created_by?: string;
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  is_published?: boolean;
+  published_at?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type EnrollmentRecord = {
@@ -100,6 +112,25 @@ export type EnrollmentRecord = {
   progress?: number;
   payment_status?: string;
   payment_method?: string;
+};
+
+export type UserRecord = {
+  id: string;
+  name?: string;
+  full_name?: string;
+  email?: string;
+  role?: string;
+  avatar?: string;
+};
+
+export type ContactMessageRecord = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  created_at?: string;
 };
 
 export type NotificationRecord = {
@@ -115,6 +146,32 @@ export type SettingsRecord = {
   site_name?: string;
   site_email?: string;
   site_phone?: string;
+  site_address?: string;
+  navbar_announcement?: string;
+  footer_tagline?: string;
+  footer_copyright?: string;
+  whatsapp_number?: string;
+  facebook_url?: string;
+  instagram_url?: string;
+  logo_url?: string;
+  primary_color?: string;
+  secondary_color?: string;
+};
+
+export const DEFAULT_SETTINGS: SettingsRecord = {
+  site_name: "Iqra International",
+  site_email: "hello@iqrainternational.com",
+  site_phone: "+1 (000) 000-0000",
+  site_address: "Islamabad, Pakistan",
+  navbar_announcement: "Learn Quran with confidence and clarity.",
+  footer_tagline: "Structured Quran and Islamic learning with qualified scholars and a welcoming community.",
+  footer_copyright: "© 2025 Iqra International. All rights reserved.",
+  whatsapp_number: "+923001234567",
+  facebook_url: "https://facebook.com",
+  instagram_url: "https://instagram.com",
+  logo_url: "",
+  primary_color: "#0f172a",
+  secondary_color: "#2563eb",
 };
 
 export type Product = CourseRecord;
@@ -266,17 +323,44 @@ export async function getCourseById(courseId: string): Promise<CourseRecord | nu
 export async function getCourseLessons(courseId: string): Promise<LessonRecord[]> {
   try {
     const response = await fetchJson<LessonRecord[]>(`/v1/courses/${courseId}/lessons`);
-    return Array.isArray(response) ? response : [];
+    return Array.isArray(response) ? response.map(normalizeLesson) : [];
   } catch (err) {
     logApiFailure(`getCourseLessons(${courseId})`, err);
     return [];
   }
 }
 
+function normalizeLesson(item: Partial<LessonRecord> & Record<string, unknown>): LessonRecord {
+  return {
+    id: String(item.id ?? crypto.randomUUID()),
+    title: String(item.title ?? item.name ?? "Lesson"),
+    description: String(item.description ?? ""),
+    video_url: typeof item.video_url === "string" ? item.video_url : typeof item.videoUrl === "string" ? item.videoUrl : undefined,
+    videoUrl: typeof item.videoUrl === "string" ? item.videoUrl : undefined,
+    thumbnail_url: typeof item.thumbnail_url === "string" ? item.thumbnail_url : undefined,
+    thumbnailUrl: typeof item.thumbnailUrl === "string" ? item.thumbnailUrl : undefined,
+    order_index: Number.isFinite(Number(item.order_index)) ? Number(item.order_index) : undefined,
+    is_free: Boolean(item.is_free ?? item.isFree),
+    course_id: typeof item.course_id === "string" ? item.course_id : typeof item.courseId === "string" ? item.courseId : undefined,
+    courseId: typeof item.courseId === "string" ? item.courseId : undefined,
+  };
+}
+
+export async function getLessons(): Promise<LessonRecord[]> {
+  try {
+    const response = await fetchJson<LessonRecord[] | { data?: LessonRecord[]; lessons?: LessonRecord[] }>("/v1/lessons");
+    const lessons = Array.isArray(response) ? response : response.data ?? response.lessons ?? [];
+    return lessons.map((item) => normalizeLesson(item as Partial<LessonRecord> & Record<string, unknown>));
+  } catch (err) {
+    logApiFailure("getLessons", err);
+    return [];
+  }
+}
+
 export async function getBlogCategories(): Promise<BlogCategoryRecord[]> {
   try {
-    const response = await fetchJson<BlogCategoryRecord[]>("/v1/blog/categories");
-    return Array.isArray(response) ? response : [];
+    const response = await fetchJson<BlogCategoryRecord[] | { data?: BlogCategoryRecord[]; categories?: BlogCategoryRecord[] }>("/v1/blog/categories");
+    return Array.isArray(response) ? response : response.data ?? response.categories ?? [];
   } catch (err) {
     logApiFailure("getBlogCategories", err);
     return [];
@@ -285,11 +369,37 @@ export async function getBlogCategories(): Promise<BlogCategoryRecord[]> {
 
 export async function getBlogPosts(): Promise<BlogPostRecord[]> {
   try {
-    const response = await fetchJson<BlogPostRecord[]>("/v1/blog");
-    return Array.isArray(response) ? response : [];
+    const response = await fetchJson<BlogPostRecord[] | { data?: BlogPostRecord[]; posts?: BlogPostRecord[] }>("/v1/blog");
+    const posts = Array.isArray(response) ? response : response.data ?? response.posts ?? [];
+    return posts.map(normalizeBlogPost);
   } catch (err) {
     logApiFailure("getBlogPosts", err);
     return [];
+  }
+}
+
+function normalizeBlogPost(item: BlogPostRecord & Record<string, unknown>): BlogPostRecord {
+  return {
+    ...item,
+    id: String(item.id),
+    title: String(item.title ?? "Untitled article"),
+    content: String(item.content ?? ""),
+    category_id: typeof item.category_id === "string" ? item.category_id : undefined,
+    slug: typeof item.slug === "string" ? item.slug : undefined,
+    is_published: Boolean(item.is_published ?? item.published_at),
+  };
+}
+
+export async function getBlogPost(identifier: string): Promise<BlogPostRecord | null> {
+  try {
+    const post = identifier.includes("-") && !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(identifier)
+      ? await fetchJson<BlogPostRecord>(`/v1/blog/slug/${encodeURIComponent(identifier)}`)
+      : await fetchJson<BlogPostRecord>(`/v1/blog/${encodeURIComponent(identifier)}`);
+    return normalizeBlogPost(post as BlogPostRecord & Record<string, unknown>);
+  } catch (err) {
+    logApiFailure(`getBlogPost(${identifier})`, err);
+    const posts = await getBlogPosts();
+    return posts.find((post) => post.id === identifier || post.slug === identifier) ?? null;
   }
 }
 
@@ -315,10 +425,11 @@ export async function getNotifications(userId: string): Promise<NotificationReco
 
 export async function getSettings(): Promise<SettingsRecord> {
   try {
-    return await fetchJson<SettingsRecord>("/v1/settings");
+    const settings = await fetchJson<SettingsRecord>("/v1/settings");
+    return { ...DEFAULT_SETTINGS, ...settings };
   } catch (err) {
     logApiFailure("getSettings", err);
-    return { site_name: "Iqra Platform", site_email: "info@iqra.com", site_phone: "+923001234567" };
+    return { ...DEFAULT_SETTINGS };
   }
 }
 
