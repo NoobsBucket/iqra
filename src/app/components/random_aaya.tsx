@@ -128,7 +128,7 @@ export default function RandomAaya() {
     <div className="w-full bg-white text-zinc-950" style={{ fontFamily: "'Jost', sans-serif" }}>
       <div className="w-full border border-zinc-200 shadow-sm overflow-hidden">
 
-        {/* Image section with names + surah player + ayah controls */}
+
         <div className="relative w-full h-44 md:h-64 overflow-hidden">
           <img alt="Mosque architecture" className="object-cover w-full h-full" src={HERO} />
           <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-white/10" />
