@@ -33,8 +33,13 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 	}, [selectedCourse]);
 
 	const chosen = courseList.find((product) => product.id === courseId) ?? courseList[0];
+	const isValidUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 	const saveLocalEnrollment = (payload: Record<string, string>) => {
+		if (!payload.user_id) {
+			return;
+		}
+
 		try {
 			const existing = JSON.parse(localStorage.getItem("iqra-enrollments") ?? "[]") as Array<Record<string, unknown>>;
 			const next = [
@@ -63,8 +68,8 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 		const phone = String(formData.get("phone") ?? "").trim();
 		const notes = String(formData.get("notes") ?? "").trim();
 
-		if (!authUser) {
-			setError("Please sign in before enrolling in a course.");
+		if (!authUser || !isValidUuid(authUser.id)) {
+			setError("Please sign in with a verified account before enrolling in a course.");
 			return;
 		}
 
@@ -82,21 +87,37 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 			notes: notes || `Email: ${email}`,
 		};
 
+		if (!payload.user_id) {
+			setError("You must be signed in to enroll in this course.");
+			return;
+		}
+
 		try {
 			const response = await fetch(`${API_BASE_URL}/v1/enrollments`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				credentials: "include",
 				body: JSON.stringify(payload),
 			});
 
-			if (!response.ok) {
+			const responseData = (await response.json().catch(() => ({}))) as { success?: boolean; error?: string; message?: string };
+
+			if (!response.ok || responseData.success === false) {
+				if (!authUser) {
+					setError("You must be signed in to enroll in this course.");
+					return;
+				}
+				setError(responseData.error ?? responseData.message ?? "Enrollment could not be completed right now.");
 				saveLocalEnrollment(payload);
-				setSubmitted(true);
 				return;
 			}
 
 			setSubmitted(true);
 		} catch {
+			if (!authUser) {
+				setError("You must be signed in to enroll in this course.");
+				return;
+			}
 			saveLocalEnrollment(payload);
 			setSubmitted(true);
 		}
@@ -177,8 +198,8 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 					I agree to the learning community terms and understand this is a live enrollment request.
 				</label>
 
-				<button type="submit" disabled={loading || !courseId} className="flex h-12 w-full items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70">
-					{loading ? "Loading courses..." : "Enroll in this course"}
+				<button type="submit" disabled={loading || !courseId || !authUser} className="flex h-12 w-full items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70">
+					{loading ? "Loading courses..." : authUser ? "Enroll in this course" : "Sign in to enroll"}
 				</button>
 
 				{submitted && (

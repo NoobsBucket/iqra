@@ -3,6 +3,7 @@ import { jwtVerify } from "jose";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const SESSION_COOKIE_NAME = "iqra_session";
+const ROLE_COOKIE_NAME = "iqra-role";
 
 const isAdmin = (role: string | undefined) => role === "admin";
 const isInstructorOrAdmin = (role: string | undefined) =>
@@ -18,24 +19,30 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  const roleCookie = req.cookies.get(ROLE_COOKIE_NAME)?.value;
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!token || !JWT_SECRET) {
-    return redirectToLogin(req);
+  let role: string | undefined;
+
+  if (roleCookie) {
+    role = decodeURIComponent(roleCookie).toLowerCase();
+  } else if (token && JWT_SECRET) {
+    try {
+      const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
+      role = typeof payload.role === "string" ? payload.role.toLowerCase() : undefined;
+    } catch {
+      role = undefined;
+    }
   }
 
-  let role: string | undefined;
-  try {
-    const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
-    role = typeof payload.role === "string" ? payload.role.toLowerCase() : undefined;
-  } catch {
-    return redirectToLogin(req);
+  if (!role) {
+    return redirectToNotFound(req);
   }
 
   const allowed = isAdminRoute ? isAdmin(role) : isInstructorOrAdmin(role);
 
   if (!allowed) {
-    return NextResponse.redirect(new URL("/", req.url));
+    return redirectToNotFound(req);
   }
 
   return NextResponse.next();
@@ -45,6 +52,10 @@ function redirectToLogin(req: NextRequest) {
   const loginUrl = new URL("/login", req.url);
   loginUrl.searchParams.set("redirect", req.nextUrl.pathname);
   return NextResponse.redirect(loginUrl);
+}
+
+function redirectToNotFound(req: NextRequest) {
+  return NextResponse.redirect(new URL("/404", req.url));
 }
 
 export const config = {

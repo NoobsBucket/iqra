@@ -48,14 +48,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 					const verificationError = /verify.*email|email.*verify/i.test(apiError.message);
 
 					if (verificationError) {
-						const fallbackUser = {
-							id: `local-${email}`,
-							name: email.split("@")[0] || "Account",
-							email,
-						};
-						localStorage.setItem("iqra-user", JSON.stringify(fallbackUser));
-						window.dispatchEvent(new Event("iqra-user-changed"));
-						window.location.assign("/");
+						window.location.assign(`/verify-otp?email=${encodeURIComponent(email)}`);
 						return;
 					}
 

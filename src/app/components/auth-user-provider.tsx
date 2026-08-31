@@ -1,52 +1,77 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type AuthUser = {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-    role?: "admin" | "instructor" | "user" | string;
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role?: string;
 };
 
-function setRoleCookie(role: string | undefined) {
-    if (!role) {
-        document.cookie = "iqra-role=; Max-Age=0; path=/; SameSite=Lax";
-        return;
-    }
-
-    const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `iqra-role=${encodeURIComponent(role)}; path=/; SameSite=Lax${secure}`;
-}
-
+const STORAGE_KEY = "iqra-user";
 const AuthUserContext = createContext<AuthUser | null>(null);
 
+function readStoredUser(): AuthUser | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<AuthUser>;
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const id = typeof parsed.id === "string" ? parsed.id : "";
+    const name = typeof parsed.name === "string" ? parsed.name : "Account";
+    const email = typeof parsed.email === "string" ? parsed.email : "";
+
+    if (!id && !email) return null;
+
+    return {
+      id,
+      name,
+      email,
+      avatar: typeof parsed.avatar === "string" ? parsed.avatar : undefined,
+      role: typeof parsed.role === "string" ? parsed.role : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function AuthUserProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-    useEffect(() => {
-        const loadUser = () => {
-            try {
-                const storedUser = localStorage.getItem("iqra-user");
-                const parsedUser = storedUser ? (JSON.parse(storedUser) as AuthUser) : null;
-                setUser(parsedUser);
-                setRoleCookie(parsedUser?.role ?? undefined);
-            } catch {
-                localStorage.removeItem("iqra-user");
-                setRoleCookie(undefined);
-                setUser(null);
-            }
-        };
+  useEffect(() => {
+    const syncUser = () => {
+      setUser(readStoredUser());
+    };
 
-        loadUser();
-        window.addEventListener("iqra-user-changed", loadUser);
-        return () => window.removeEventListener("iqra-user-changed", loadUser);
-    }, []);
+    syncUser();
 
-    return <AuthUserContext.Provider value={user}>{children}</AuthUserContext.Provider>;
+    window.addEventListener("iqra-user-changed", syncUser);
+    window.addEventListener("storage", syncUser);
+
+    return () => {
+      window.removeEventListener("iqra-user-changed", syncUser);
+      window.removeEventListener("storage", syncUser);
+    };
+  }, []);
+
+  const value = useMemo(() => user, [user]);
+
+  return <AuthUserContext.Provider value={value}>{children}</AuthUserContext.Provider>;
 }
 
 export function useAuthUser() {
-    return useContext(AuthUserContext);
+  return useContext(AuthUserContext);
 }

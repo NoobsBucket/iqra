@@ -6,7 +6,37 @@ const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 
 function getRedirectUri(request: NextRequest) {
-  return process.env.GOOGLE_REDIRECT_URI ?? `${request.nextUrl.origin}/api/auth/google`;
+  const requestRedirectUri = `${request.nextUrl.origin}/api/auth/google`;
+  const configuredRedirectUri = process.env.GOOGLE_REDIRECT_URI?.trim();
+
+  if (!configuredRedirectUri) {
+    console.warn(
+      "[google-oauth] GOOGLE_REDIRECT_URI is not set - falling back to request.nextUrl.origin, " +
+        "which can be unreliable on Cloudflare Workers. Set it explicitly to avoid redirect_uri mismatches."
+    );
+    return requestRedirectUri;
+  }
+
+  try {
+    const configured = new URL(configuredRedirectUri);
+    const normalizedConfigured = `${configured.origin}${configured.pathname.replace(/\/$/, "")}`;
+
+    if (normalizedConfigured !== requestRedirectUri) {
+      console.warn(
+        "[google-oauth] GOOGLE_REDIRECT_URI does not match the current request host. " +
+          `Configured: ${normalizedConfigured} | Request: ${requestRedirectUri}. Using the request host to avoid invalid_grant.`
+      );
+      return requestRedirectUri;
+    }
+
+    return normalizedConfigured;
+  } catch {
+    console.warn(
+      "[google-oauth] GOOGLE_REDIRECT_URI is invalid. Falling back to the request host. " +
+        `Configured value: ${configuredRedirectUri}`
+    );
+    return requestRedirectUri;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -22,9 +52,12 @@ export async function GET(request: NextRequest) {
   }
 
   if (!code) {
+    const redirectUri = getRedirectUri(request);
+    console.log("[google-oauth] authorize step using redirect_uri:", redirectUri);
+
     const authorizeUrl = new URL(GOOGLE_AUTHORIZE_URL);
     authorizeUrl.searchParams.set("client_id", clientId);
-    authorizeUrl.searchParams.set("redirect_uri", getRedirectUri(request));
+    authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("response_type", "code");
     authorizeUrl.searchParams.set("scope", "openid email profile");
     authorizeUrl.searchParams.set("access_type", "offline");
@@ -33,6 +66,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const redirectUri = getRedirectUri(request);
+    console.log("[google-oauth] token exchange using redirect_uri:", redirectUri);
+
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -40,13 +76,22 @@ export async function GET(request: NextRequest) {
         code,
         client_id: clientId,
         client_secret: clientSecret,
-        redirect_uri: getRedirectUri(request),
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
       }),
       cache: "no-store",
     });
 
-    if (!tokenResponse.ok) throw new Error("Google authorization code could not be exchanged");
+    if (!tokenResponse.ok) {
+      // This is the actual fix: log and surface Google's real error instead
+      // of a generic message. Google's response body almost always names the
+      // exact problem (e.g. "redirect_uri_mismatch", "invalid_grant" because
+      // the code was already used or expired, "invalid_client", etc.).
+      const errorBody = await tokenResponse.text();
+      console.error("[google-oauth] token exchange failed:", tokenResponse.status, errorBody);
+      throw new Error(`Google token exchange failed: ${errorBody}`);
+    }
+
     const token = (await tokenResponse.json()) as { access_token?: string };
     if (!token.access_token) throw new Error("Google did not return an access token");
 
@@ -54,7 +99,11 @@ export async function GET(request: NextRequest) {
       headers: { Authorization: `Bearer ${token.access_token}` },
       cache: "no-store",
     });
-    if (!profileResponse.ok) throw new Error("Google profile could not be loaded");
+    if (!profileResponse.ok) {
+      const errorBody = await profileResponse.text();
+      console.error("[google-oauth] profile fetch failed:", profileResponse.status, errorBody);
+      throw new Error("Google profile could not be loaded");
+    }
 
     const profile = (await profileResponse.json()) as {
       sub?: string;
@@ -79,9 +128,14 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
     });
 
-    if (!persistResponse.ok) throw new Error("The backend could not save this Google account");
+    if (!persistResponse.ok) {
+      const errorBody = await persistResponse.text();
+      console.error("[google-oauth] backend save failed:", persistResponse.status, errorBody);
+      throw new Error("The backend could not save this Google account");
+    }
+
     const saved = (await persistResponse.json()) as Record<string, unknown>;
-    const savedData = saved.data && typeof saved.data === "object" ? saved.data as Record<string, unknown> : undefined;
+    const savedData = saved.data && typeof saved.data === "object" ? (saved.data as Record<string, unknown>) : undefined;
     const savedUser = (saved.user as Record<string, unknown> | undefined) ?? savedData ?? saved;
     const user = {
       id: String(savedUser.id ?? savedUser.user_id ?? `google-${profile.sub}`),
@@ -91,9 +145,10 @@ export async function GET(request: NextRequest) {
     };
 
     const escapedUser = JSON.stringify(user).replace(/</g, "\\u003c");
-    return new NextResponse(`<!doctype html><script>localStorage.setItem("iqra-user",${JSON.stringify(escapedUser)});window.dispatchEvent(new Event("iqra-user-changed"));window.location.replace("/");</script>`, {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
+    return new NextResponse(
+      `<!doctype html><script>localStorage.setItem("iqra-user",${JSON.stringify(escapedUser)});window.dispatchEvent(new Event("iqra-user-changed"));window.location.replace("/");</script>`,
+      { headers: { "Content-Type": "text/html; charset=utf-8" } }
+    );
   } catch (oauthError) {
     const message = oauthError instanceof Error ? oauthError.message : "Google sign-in failed";
     return NextResponse.redirect(new URL(`/login?oauth_error=${encodeURIComponent(message)}`, request.url));
