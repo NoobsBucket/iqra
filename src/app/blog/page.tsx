@@ -52,7 +52,7 @@ export default async function BlogPage() {
             </article>
           )) : (
             <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500 md:col-span-2 xl:col-span-3">
-              Blog posts will appear here when the API is connected.
+              Blog posts will appear here when the API is connectedd.
             </div>
           )}
         </div>
