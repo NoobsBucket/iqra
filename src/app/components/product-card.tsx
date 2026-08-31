@@ -66,7 +66,7 @@ export function ProductCard({ product }: { product: Product }) {
 					<div className={styles.price}>
 						{originalPrice && <s className={styles.original}>${Number(originalPrice).toFixed(2)}</s>} ${displayPrice.toFixed(2)}
 					</div>
-					<Link href={`/register?course=${product.id}`} className={styles.btnEnrol}>Enrol Now</Link>
+					<Link href={`/courses/${product.id}`} className={styles.btnEnrol}>View Details</Link>
 				</div>
 			</div>
 		</article>

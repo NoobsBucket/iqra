@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCourseById, getCourseLessons } from "@/lib/api";
 import { LessonCard } from "@/components/lesson-card";
+import { CourseReviews } from "@/components/course-reviews";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,12 @@ export default async function CourseDetailPage({
             </div>
           )}
         </section>
+
+        <CourseReviews 
+          courseId={course.id}
+          averageRating={typeof (course as unknown as { average_rating?: number }).average_rating === "number" ? (course as unknown as { average_rating?: number }).average_rating : Number(course.rating ?? 4.9)}
+          totalStudents={typeof (course as unknown as { total_students?: number }).total_students === "number" ? (course as unknown as { total_students?: number }).total_students : 1000}
+        />
       </div>
     </main>
   );

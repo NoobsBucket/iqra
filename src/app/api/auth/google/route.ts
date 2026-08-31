@@ -39,6 +39,56 @@ function getRedirectUri(request: NextRequest) {
   }
 }
 
+function getGoogleSaveEndpoints(baseUrl: string): string[] {
+  const configuredPath = process.env.GOOGLE_AUTH_API_PATH?.trim();
+
+  const candidates = [
+    configuredPath ? `${baseUrl}${configuredPath.startsWith("/") ? configuredPath : `/${configuredPath}`}` : undefined,
+    `${baseUrl}/api/v1/auth/google`,
+    `${baseUrl}/v1/auth/google`,
+    `${baseUrl}/api/auth/google`,
+    `${baseUrl}/auth/google`,
+  ];
+
+  return [...new Set(candidates.filter(Boolean) as string[])];
+}
+
+function getGoogleSaveBodies(profile: {
+  sub: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  email_verified?: boolean;
+}) {
+  const normalizedName = profile.name ?? profile.email.split("@")[0];
+  const commonBody = {
+    provider: "google",
+    provider_id: profile.sub,
+    email: profile.email,
+    name: normalizedName,
+    avatar_url: profile.picture,
+    email_verified: profile.email_verified ?? true,
+  };
+
+  return [
+    commonBody,
+    {
+      ...commonBody,
+      providerId: profile.sub,
+      google_id: profile.sub,
+    },
+    {
+      provider: "google",
+      google_id: profile.sub,
+      provider_id: profile.sub,
+      email: profile.email,
+      full_name: normalizedName,
+      avatar_url: profile.picture,
+      email_verified: profile.email_verified ?? true,
+    },
+  ];
+}
+
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const error = request.nextUrl.searchParams.get("error");
@@ -114,27 +164,50 @@ export async function GET(request: NextRequest) {
     };
     if (!profile.sub || !profile.email) throw new Error("Google account did not provide an email");
 
-    const persistResponse = await fetch(`${UPSTREAM_API_BASE_URL}${process.env.GOOGLE_AUTH_API_PATH ?? "/v1/auth/google"}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        provider: "google",
-        provider_id: profile.sub,
-        email: profile.email,
-        name: profile.name ?? profile.email.split("@")[0],
-        avatar_url: profile.picture,
-        email_verified: profile.email_verified ?? true,
-      }),
-      cache: "no-store",
-    });
+    const normalizedProfile = {
+      sub: profile.sub,
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture,
+      email_verified: profile.email_verified,
+    };
 
-    if (!persistResponse.ok) {
-      const errorBody = await persistResponse.text();
-      console.error("[google-oauth] backend save failed:", persistResponse.status, errorBody);
-      throw new Error("The backend could not save this Google account");
+    const endpointCandidates = getGoogleSaveEndpoints(UPSTREAM_API_BASE_URL);
+    const payloadCandidates = getGoogleSaveBodies(normalizedProfile);
+    let lastSaveError: string | null = null;
+    let saved: Record<string, unknown> | undefined;
+
+    for (const endpoint of endpointCandidates) {
+      for (const payload of payloadCandidates) {
+        const persistResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        });
+
+        if (persistResponse.ok) {
+          saved = (await persistResponse.json()) as Record<string, unknown>;
+          break;
+        }
+
+        const errorBody = await persistResponse.text();
+        const trimmedError = errorBody.trim();
+        const errorMessage = trimmedError || persistResponse.statusText || "unknown backend error";
+        lastSaveError = `${endpoint} => ${persistResponse.status} ${errorMessage}`;
+        console.error("[google-oauth] backend save failed:", endpoint, persistResponse.status, errorMessage);
+      }
+
+      if (saved) break;
     }
 
-    const saved = (await persistResponse.json()) as Record<string, unknown>;
+    if (!saved) {
+      throw new Error(
+        lastSaveError
+          ? `The backend could not save this Google account: ${lastSaveError}`
+          : "The backend could not save this Google account"
+      );
+    }
     const savedData = saved.data && typeof saved.data === "object" ? (saved.data as Record<string, unknown>) : undefined;
     const savedUser = (saved.user as Record<string, unknown> | undefined) ?? savedData ?? saved;
     const user = {
