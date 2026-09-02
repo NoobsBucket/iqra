@@ -1,4 +1,4 @@
-import { getCourseLessons, getCourses, type CourseRecord, type LessonRecord } from "@/lib/api";
+import { getCourseLessons, getCourses, isUuid, type CourseRecord, type LessonRecord } from "@/lib/api";
 import { LessonCard } from "@/components/lesson-card";
 
 type CourseLesson = {
@@ -8,7 +8,7 @@ type CourseLesson = {
 
 export default async function RandomLessons() {
   const courses = await getCourses();
-  const courseLessons = await Promise.all(courses.map(async (course) => {
+  const courseLessons = await Promise.all(courses.filter((course) => isUuid(course.id)).map(async (course) => {
     const lessons = await getCourseLessons(course.id);
     return lessons.map((lesson) => ({ course, lesson }));
   }));

@@ -322,6 +322,10 @@ export async function getCourseById(courseId: string): Promise<CourseRecord | nu
 }
 
 export async function getCourseLessons(courseId: string): Promise<LessonRecord[]> {
+  if (!isUuid(courseId)) {
+    return [];
+  }
+
   try {
     const response = await fetchJson<LessonRecord[]>(`/v1/courses/${courseId}/lessons`);
     return Array.isArray(response) ? response.map(normalizeLesson) : [];
@@ -329,6 +333,10 @@ export async function getCourseLessons(courseId: string): Promise<LessonRecord[]
     logApiFailure(`getCourseLessons(${courseId})`, err);
     return [];
   }
+}
+
+export function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function normalizeLesson(item: Partial<LessonRecord> & Record<string, unknown>): LessonRecord {
