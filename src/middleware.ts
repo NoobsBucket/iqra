@@ -59,5 +59,5 @@ function redirectToNotFound(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/blog-panel/:path*"],
+  matcher: ["/admin", "/admin/:path*", "/blog-panel/:path*"],
 };
