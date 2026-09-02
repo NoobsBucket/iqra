@@ -4,13 +4,7 @@ import productsFallback from "@/app/api/product.json";
 // Point all server and proxy requests at the backend base URL so avatar/image
 // endpoints resolve correctly. Keep browser requests going through the same-origin
 // proxy to avoid mixed-content issues.
-const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!configuredApiBaseUrl) {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL is required");
-}
-
-export const UPSTREAM_API_BASE_URL = configuredApiBaseUrl.replace(/\/$/, "");
+export const UPSTREAM_API_BASE_URL = "http://169.58.214.134:4000";
 
 export const API_BASE_URL = "/api/proxy";
 
@@ -272,6 +266,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     const response = await fetch(url, {
       ...init,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(init?.headers ?? {}),
