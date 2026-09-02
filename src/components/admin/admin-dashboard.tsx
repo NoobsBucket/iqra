@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuthUser } from "@/app/components/auth-user-provider";
 import { API_BASE_URL, DEFAULT_SETTINGS, type BlogCategoryRecord, type BlogPostRecord, type CategoryRecord, type ContactMessageRecord, type CourseRecord, type EnrollmentRecord, type LessonRecord, type SettingsRecord, type UserRecord } from "@/lib/api";
 
 const defaultCourseForm = {
@@ -84,11 +85,13 @@ function asArray<T>(value: T[] | Record<string, unknown> | null | undefined): T[
 }
 
 export function AdminDashboard() {
+  const authUser = useAuthUser();
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [courses, setCourses] = useState<CourseRecord[]>([]);
   const [lessons, setLessons] = useState<LessonRecord[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [editingCourseId, setEditingCourseId] = useState<string>("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedLessonId, setSelectedLessonId] = useState<string>("");
   const [categoryForm, setCategoryForm] = useState(defaultCategoryForm);
@@ -151,7 +154,13 @@ export function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!selectedCourseId) return;
+    if (!selectedCourseId) {
+      setLessons([]);
+      setEnrollments([]);
+      setSelectedLessonId("");
+      setLessonForm(defaultLessonForm);
+      return;
+    }
 
     const loadLessons = async () => {
       try {
@@ -165,6 +174,8 @@ export function AdminDashboard() {
       }
     };
 
+    setSelectedLessonId("");
+    setLessonForm(defaultLessonForm);
     loadLessons();
   }, [selectedCourseId]);
 
@@ -211,22 +222,34 @@ export function AdminDashboard() {
   const handleCreateCourse = async () => {
     try {
       const selectedCategoryId = courseForm.category_id;
+      const price = Number(courseForm.price);
+      const discountPrice = Number(courseForm.discount_price || 0);
+
+      if (!authUser?.id) {
+        setMessage("You must be signed in to create a course.");
+        return;
+      }
+
+      if (!courseForm.title.trim() || !courseForm.description.trim() || !selectedCategoryId || !Number.isFinite(price) || !Number.isFinite(discountPrice)) {
+        setMessage("Enter a title, description, valid prices, and select a category.");
+        return;
+      }
 
       const payload = {
-        created_by: "eb5f5b0c-83e7-4f38-a119-8ce5826711cb",
+        created_by: authUser.id,
         title: courseForm.title,
         description: courseForm.description,
         image_url: courseForm.image_url,
-        price: Number(courseForm.price),
-        discount_price: Number(courseForm.discount_price || 0),
+        price,
+        discount_price: discountPrice,
         currency: courseForm.currency,
-        category_id: selectedCategoryId || undefined,
-        category_ids: selectedCategoryId ? [selectedCategoryId] : [],
+        category_ids: [selectedCategoryId],
       };
 
       const created = await apiRequest<CourseRecord>("/v1/courses", "POST", payload);
       setCourses((current) => [created, ...current]);
       setCourseForm(defaultCourseForm);
+      setEditingCourseId("");
       setSelectedCourseId(created.id);
       setMessage("Course created successfully.");
     } catch {
@@ -245,11 +268,12 @@ export function AdminDashboard() {
         discount_price: Number(courseForm.discount_price || 0),
         currency: courseForm.currency,
         image_url: courseForm.image_url,
-        category_id: selectedCategoryId || undefined,
         category_ids: selectedCategoryId ? [selectedCategoryId] : [],
       });
 
       setCourses((current) => current.map((course) => (course.id === id ? updated : course)));
+      setCourseForm(defaultCourseForm);
+      setEditingCourseId("");
       setMessage("Course updated successfully.");
     } catch {
       setMessage("Course update failed.");
@@ -257,6 +281,7 @@ export function AdminDashboard() {
   };
 
   const editCourse = (course: CourseRecord) => {
+    setEditingCourseId(course.id);
     setSelectedCourseId(course.id);
     const selectedCategory = course.category_ids?.[0] ?? course.categoryId ?? course.category_id ?? "";
 
@@ -293,18 +318,25 @@ export function AdminDashboard() {
 
   const handleCreateLesson = async () => {
     try {
-      const payload = {
-        title: lessonForm.title,
-        description: lessonForm.description,
-        video_url: lessonForm.video_url,
-        order_index: Number(lessonForm.order_index),
-        is_free: lessonForm.is_free === "true",
-      };
+      const orderIndex = Number(lessonForm.order_index);
 
       if (!selectedCourseId) {
         setMessage("Select a course before creating a lesson.");
         return;
       }
+
+      if (!lessonForm.title.trim() || !lessonForm.description.trim() || !Number.isInteger(orderIndex) || orderIndex < 1) {
+        setMessage("Enter a lesson title, description, and a valid order number.");
+        return;
+      }
+
+      const payload = {
+        title: lessonForm.title.trim(),
+        description: lessonForm.description.trim(),
+        video_url: lessonForm.video_url.trim() || null,
+        order_index: orderIndex,
+        is_free: lessonForm.is_free === "true",
+      };
 
       const created = await apiRequest<LessonRecord>(`/v1/courses/${selectedCourseId}/lessons`, "POST", payload);
       setLessons((current) => [created, ...current]);
@@ -317,12 +349,23 @@ export function AdminDashboard() {
 
   const handleUpdateLesson = async (id: string) => {
     try {
+      const orderIndex = Number(lessonForm.order_index);
+
+      if (!lessonForm.title.trim() || !lessonForm.description.trim() || !Number.isInteger(orderIndex) || orderIndex < 1) {
+        setMessage("Enter a lesson title, description, and a valid order number.");
+        return;
+      }
+
       const updated = await apiRequest<LessonRecord>(`/v1/lessons/${id}`, "PATCH", {
-        title: lessonForm.title,
-        description: lessonForm.description,
-        video_url: lessonForm.video_url,
+        title: lessonForm.title.trim(),
+        description: lessonForm.description.trim(),
+        video_url: lessonForm.video_url.trim() || null,
+        order_index: orderIndex,
+        is_free: lessonForm.is_free === "true",
       });
       setLessons((current) => current.map((lesson) => (lesson.id === id ? updated : lesson)));
+      setSelectedLessonId("");
+      setLessonForm(defaultLessonForm);
       setMessage("Lesson updated successfully.");
     } catch {
       setMessage("Lesson update failed.");
@@ -344,6 +387,10 @@ export function AdminDashboard() {
     try {
       await apiRequest<void>(`/v1/lessons/${id}`, "DELETE");
       setLessons((current) => current.filter((lesson) => lesson.id !== id));
+      if (selectedLessonId === id) {
+        setSelectedLessonId("");
+        setLessonForm(defaultLessonForm);
+      }
       setMessage("Lesson deleted successfully.");
     } catch {
       setMessage("Lesson delete failed.");
@@ -375,7 +422,26 @@ export function AdminDashboard() {
 
   const handleCreateBlogPost = async () => {
     try {
-      const created = await apiRequest<BlogPostRecord>("/v1/blog", "POST", { ...blogForm, created_by: "eb5f5b0c-83e7-4f38-a119-8ce5826711cb" });
+      if (!authUser?.id) {
+        setMessage("You must be signed in to create a blog post.");
+        return;
+      }
+
+      if (!blogForm.title.trim() || !blogForm.content.trim() || !blogForm.category_id) {
+        setMessage("Enter a title and content, then select a blog category.");
+        return;
+      }
+
+      const created = await apiRequest<BlogPostRecord>("/v1/blog", "POST", {
+        created_by: authUser.id,
+        title: blogForm.title,
+        excerpt: blogForm.excerpt || null,
+        content: blogForm.content,
+        cover_image: blogForm.cover_image || null,
+        category_id: blogForm.category_id,
+        meta_title: blogForm.meta_title || null,
+        meta_description: blogForm.meta_description || null,
+      });
       setBlogPosts((current) => [created, ...current]);
       setBlogForm(defaultBlogForm);
       setMessage("Blog post created as a draft. Verify its content, then publish it below.");
@@ -551,7 +617,8 @@ export function AdminDashboard() {
             </div>
             <input value={courseForm.image_url} onChange={(event) => setCourseForm((current) => ({ ...current, image_url: event.target.value }))} placeholder="Course image URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <div className="flex flex-wrap gap-3">
-              <button onClick={handleCreateCourse} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">Create course</button>
+              <button onClick={() => editingCourseId ? handleUpdateCourse(editingCourseId) : handleCreateCourse()} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">{editingCourseId ? "Update course" : "Create course"}</button>
+              {editingCourseId ? <button onClick={() => { setEditingCourseId(""); setCourseForm(defaultCourseForm); }} className="rounded-xl border border-slate-200 px-4 py-2 font-semibold text-slate-700">New course</button> : null}
               <select value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 outline-none">
                 <option value="">Select course</option>
                 {courses.map((course) => (
@@ -583,7 +650,18 @@ export function AdminDashboard() {
       </div>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-xl font-bold">Lessons</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Lessons</h2>
+            <p className="text-sm text-slate-600">Manage lessons for the selected course.</p>
+          </div>
+          <select value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 outline-none sm:min-w-64">
+            <option value="">Select course</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>{course.title}</option>
+            ))}
+          </select>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <input value={lessonForm.title} onChange={(event) => setLessonForm((current) => ({ ...current, title: event.target.value }))} placeholder="Lesson title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           <input value={lessonForm.order_index} onChange={(event) => setLessonForm((current) => ({ ...current, order_index: event.target.value }))} placeholder="Order index" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
@@ -599,11 +677,14 @@ export function AdminDashboard() {
           </div>
         </div>
         <div className="mt-4 flex gap-3">
-          <button onClick={handleCreateLesson} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">Create lesson</button>
+          <button onClick={handleCreateLesson} disabled={!selectedCourseId} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Create lesson</button>
           <button onClick={() => selectedLessonId && handleUpdateLesson(selectedLessonId)} disabled={!selectedLessonId} className="rounded-xl bg-teal-600 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Update selected lesson</button>
+          <button onClick={() => { setSelectedLessonId(""); setLessonForm(defaultLessonForm); }} disabled={!selectedLessonId} className="rounded-xl border border-slate-200 px-4 py-2 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40">New lesson</button>
         </div>
 
         <div className="mt-6 space-y-3">
+          {selectedCourseId && lessons.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No lessons found for this course yet.</p> : null}
+          {!selectedCourseId ? <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">Select a course to view its lessons.</p> : null}
           {lessons.map((lesson) => (
             <div key={lesson.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <div>

@@ -42,11 +42,11 @@ export function ProductCard({ product }: { product: Product }) {
 
 	const thumbStyle = product.image_url
 		? {
-				backgroundImage: `linear-gradient(135deg, rgba(10, 20, 30, 0.10), rgba(10, 20, 30, 0.18)), url(${product.image_url})`,
+				backgroundImage: `url(${product.image_url})`,
 				backgroundSize: "cover",
 				backgroundPosition: "center",
 			}
-		: { background: product.thumbBg ?? "linear-gradient(135deg,#E6F4F4,#C5E8E8)" };
+		: { backgroundColor: "#e8f3f0" };
 
 	return (
 		<article className={styles.card}>

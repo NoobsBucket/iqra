@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuthUser } from "@/app/components/auth-user-provider";
 import { API_BASE_URL, type BlogCategoryRecord, type BlogPostRecord } from "@/lib/api";
 
 const defaultBlogForm = {
@@ -31,6 +32,7 @@ async function apiRequest<T>(path: string, method = "GET", body?: unknown): Prom
 }
 
 export function BlogPanel() {
+  const authUser = useAuthUser();
   const [blogCategories, setBlogCategories] = useState<BlogCategoryRecord[]>([]);
   const [blogPosts, setBlogPosts] = useState<BlogPostRecord[]>([]);
   const [form, setForm] = useState(defaultBlogForm);
@@ -60,9 +62,25 @@ export function BlogPanel() {
 
   const handleSubmit = async () => {
     try {
+      if (!form.title.trim() || !form.content.trim() || !form.category_id) {
+        setMessage("Enter a title and content, then select a blog category.");
+        return;
+      }
+
+      if (!selectedPostId && !authUser?.id) {
+        setMessage("You must be signed in to create a blog post.");
+        return;
+      }
+
       const payload = {
-        ...form,
-        created_by: "system",
+        ...(selectedPostId ? {} : { created_by: authUser?.id }),
+        title: form.title,
+        excerpt: form.excerpt || null,
+        content: form.content,
+        cover_image: form.cover_image || null,
+        category_id: form.category_id,
+        meta_title: form.meta_title || null,
+        meta_description: form.meta_description || null,
       };
 
       if (selectedPostId) {

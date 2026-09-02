@@ -33,26 +33,26 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#eef4f8] px-4 py-10 md:py-16" style={{ fontFamily: "var(--font-jost), sans-serif" }}>
-      <div className="mx-auto max-w-lg rounded-[2rem] border border-slate-200/80 bg-white p-7 shadow-[0_28px_80px_rgba(15,45,65,0.14)] sm:p-12">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-sky-700">Password recovery</p>
-        <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950">Forgot your password?</h1>
-        <p className="mt-4 text-base font-medium leading-7 text-slate-600">Enter your email and we’ll send a secure reset code to your inbox.</p>
+    <main className="min-h-screen bg-[#f5f7f2] px-4 py-10 text-black md:py-16" style={{ fontFamily: "var(--font-jost), sans-serif" }}>
+      <div className="mx-auto max-w-lg rounded-md border border-black/15 bg-white p-7 sm:p-12">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-rose-600">Password recovery</p>
+        <h1 className="mt-4 text-4xl font-black tracking-tight text-black">Forgot your password?</h1>
+        <p className="mt-4 text-base font-medium leading-7 text-black/60">Enter your email and we’ll send a secure reset code to your inbox.</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <label className="block text-sm font-bold text-slate-800">
+          <label className="block text-sm font-bold text-black">
             Email address
-            <input required value={email} onChange={(event) => setEmail(event.target.value)} type="email" className="mt-2 h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:bg-white focus:ring-4 focus:ring-sky-100" placeholder="you@example.com" />
+            <input required value={email} onChange={(event) => setEmail(event.target.value)} type="email" className="mt-2 h-14 w-full rounded-md border border-black/15 bg-white px-4 text-base font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black focus:ring-2 focus:ring-rose-100" placeholder="you@example.com" />
           </label>
 
-          <button type="submit" disabled={loading} className="w-full rounded-2xl bg-sky-700 px-5 py-4 text-base font-black text-white shadow-[0_10px_24px_rgba(3,105,161,0.22)] transition hover:bg-sky-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 disabled:cursor-not-allowed disabled:opacity-70">
+          <button type="submit" disabled={loading} className="w-full rounded-md bg-black px-5 py-4 text-base font-black text-white transition hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-70">
             {loading ? "Sending..." : "Send reset code"}
           </button>
         </form>
 
         <div className="mt-7 flex items-center justify-between gap-3 text-sm">
-          <Link href="/login" className="font-bold text-sky-700 hover:text-sky-900">Back to login</Link>
-          <span className="font-medium text-slate-500">We’ll verify your identity</span>
+          <Link href="/login" className="font-bold text-rose-700 hover:text-black">Back to login</Link>
+          <span className="font-medium text-black/50">We’ll verify your identity</span>
         </div>
 
         {status && <p className="mt-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{status}</p>}

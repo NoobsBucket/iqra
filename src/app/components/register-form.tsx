@@ -125,13 +125,13 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 
 	return (
 		<div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
-			<aside className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+			<aside className="overflow-hidden rounded-md border border-black/15 bg-white">
 				{chosen ? (
 					<>
-						<div className="h-52 w-full bg-slate-900 bg-cover bg-center" style={{ backgroundImage: chosen.image_url ? `linear-gradient(135deg, rgba(15,23,42,0.15), rgba(15,23,42,0.3)), url(${chosen.image_url})` : undefined }} />
+						<div className="h-52 w-full bg-slate-900 bg-cover bg-center" style={{ backgroundImage: chosen.image_url ? `url(${chosen.image_url})` : undefined }} />
 						<div className="space-y-5 p-6 md:p-8">
 							<div className="flex items-center justify-between gap-3">
-								<span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-teal-800">Selected course</span>
+								<span className="rounded-md bg-rose-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-rose-700">Selected course</span>
 								<span className="text-sm font-semibold text-slate-500">{chosen.duration ?? "Flexible"}</span>
 							</div>
 							<h2 className="text-3xl font-black text-slate-950">{chosen.title ?? chosen.name}</h2>
@@ -156,10 +156,10 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 				)}
 			</aside>
 
-			<form className="space-y-5 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)] md:p-8" onSubmit={handleSubmit}>
+					<form className="space-y-5 rounded-md border border-black/15 bg-white p-6 md:p-8" onSubmit={handleSubmit}>
 				<div className="flex items-center justify-between gap-4 pb-2">
 					<div>
-						<p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Enroll now</p>
+						<p className="text-xs font-bold uppercase tracking-[0.22em] text-rose-600">Enroll now</p>
 						<h3 className="mt-2 text-3xl font-black text-slate-950">Complete your registration</h3>
 					</div>
 					<Link href="/courses" className="hidden text-sm font-semibold text-slate-600 hover:text-slate-900 sm:inline">Browse courses</Link>
@@ -171,11 +171,11 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 				</div>
 
 				{authUser ? (
-					<div className="rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+					<div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
 						<strong>Signed in as:</strong> {authUser.name} ({authUser.email})
 					</div>
 				) : (
-					<p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Sign in to submit your enrollment request.</p>
+					<p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Sign in to submit your enrollment request.</p>
 				)}
 				<Field label="Email address" name="email" type="email" placeholder="you@example.com" />
 				<Field label="Phone / WhatsApp" name="phone" placeholder="+923001234567" />
@@ -183,7 +183,7 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 
 				<label className="block space-y-2 text-sm font-semibold text-slate-800">
 					Choose a course
-					<select required disabled={loading} value={courseId} onChange={(event) => setCourseId(event.target.value)} className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 font-normal text-slate-950 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-100 disabled:cursor-not-allowed disabled:opacity-60">
+					<select required disabled={loading} value={courseId} onChange={(event) => setCourseId(event.target.value)} className="h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal text-black outline-none transition focus:border-black focus:ring-2 focus:ring-rose-100 disabled:cursor-not-allowed disabled:opacity-60">
 						<option value="">Select a course</option>
 						{courseList.map((product) => (
 							<option key={product.id} value={product.id}>
@@ -198,17 +198,17 @@ export function RegisterForm({ selectedCourse }: { selectedCourse?: string }) {
 					I agree to the learning community terms and understand this is a live enrollment request.
 				</label>
 
-				<button type="submit" disabled={loading || !courseId || !authUser} className="flex h-12 w-full items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-70">
+				<button type="submit" disabled={loading || !courseId || !authUser} className="flex h-12 w-full items-center justify-center rounded-md bg-black px-5 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70">
 					{loading ? "Loading courses..." : authUser ? "Enroll in this course" : "Sign in to enroll"}
 				</button>
 
 				{submitted && (
-					<p className="rounded-2xl bg-teal-50 px-4 py-3 text-center text-sm font-semibold text-teal-800">
+					<p className="rounded-md bg-emerald-50 px-4 py-3 text-center text-sm font-semibold text-emerald-800">
 						Enrollment submitted for {chosen?.title ?? chosen?.name ?? "your selected course"}.
 					</p>
 				)}
-				{error && <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
-				<p className="text-center text-sm text-slate-500">Need to review courses first? <Link href="/courses" className="font-semibold text-teal-700">View all courses</Link></p>
+				{error && <p className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
+				<p className="text-center text-sm text-black/50">Need to review courses first? <Link href="/courses" className="font-semibold text-rose-700">View all courses</Link></p>
 			</form>
 		</div>
 	);
@@ -218,7 +218,7 @@ function Field({ label, name, type = "text", placeholder }: { label: string; nam
 	return (
 		<label className="block space-y-2 text-sm font-semibold text-slate-800">
 			{label}
-			<input required name={name} type={type} placeholder={placeholder} className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:ring-4 focus:ring-teal-100" />
+			<input required name={name} type={type} placeholder={placeholder} className="h-12 w-full rounded-md border border-black/15 bg-white px-4 font-normal text-black outline-none transition placeholder:text-black/35 focus:border-black focus:ring-2 focus:ring-rose-100" />
 		</label>
 	);
 }

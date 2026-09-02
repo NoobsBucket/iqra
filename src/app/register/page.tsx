@@ -16,19 +16,19 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
 	const selectedCourse = typeof params.course === "string" ? params.course : undefined;
 
 	return (
-		<div className="min-h-screen bg-[#f7faf8] text-slate-900" style={{ fontFamily: "var(--font-jost), sans-serif" }}>
+		<div className="min-h-screen bg-[#f5f7f2] text-black" style={{ fontFamily: "var(--font-jost), sans-serif" }}>
 			<HeaderNavigationBase items={navItems} activeUrl="/courses" />
 			<main className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-16">
 				<div className="mb-8 text-center md:text-left">
-					<p className="text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Course registration</p>
-					<h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">Enroll in your dedicated course</h1>
-					<p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+					<p className="text-xs font-bold uppercase tracking-[0.22em] text-rose-600">Course registration</p>
+					<h1 className="mt-3 text-4xl font-black tracking-tight text-black md:text-5xl">Enroll in your dedicated course</h1>
+					<p className="mt-4 max-w-2xl text-base leading-7 text-black/60">
 						Choose the learning path you want, tell us who you are, and we’ll record your enrollment against the live course catalogue.
 					</p>
 				</div>
 				<RegisterForm selectedCourse={selectedCourse} />
-				<div className="mt-8 text-center text-sm text-slate-600">
-					Already enrolled? <Link href="/login" className="font-bold text-teal-700 hover:text-teal-800">Log in</Link>
+				<div className="mt-8 text-center text-sm text-black/60">
+					Already enrolled? <Link href="/login" className="font-bold text-rose-700 hover:text-black">Log in</Link>
 				</div>
 			</main>
 		</div>

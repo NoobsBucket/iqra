@@ -4,7 +4,13 @@ import productsFallback from "@/app/api/product.json";
 // Point all server and proxy requests at the backend base URL so avatar/image
 // endpoints resolve correctly. Keep browser requests going through the same-origin
 // proxy to avoid mixed-content issues.
-export const UPSTREAM_API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
+const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+if (!configuredApiBaseUrl) {
+  throw new Error("NEXT_PUBLIC_API_BASE_URL is required");
+}
+
+export const UPSTREAM_API_BASE_URL = configuredApiBaseUrl.replace(/\/$/, "");
 
 export const API_BASE_URL = "/api/proxy";
 

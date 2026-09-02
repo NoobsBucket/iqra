@@ -120,10 +120,10 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 					<Link href="/forgot-password" className="text-sm font-semibold text-slate-600 hover:text-slate-900">Forgot password?</Link>
 				</div>
 			)}
-			<button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center rounded-2xl bg-sky-700 px-5 text-base font-black text-white shadow-[0_10px_24px_rgba(3,105,161,0.22)] transition hover:bg-sky-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700 disabled:cursor-not-allowed disabled:opacity-70">
+			<button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center rounded-md bg-black px-5 text-base font-black text-white transition hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-70">
 				{loading ? (isLogin ? "Logging in..." : "Creating account...") : isLogin ? "Log in" : "Create account"}
 			</button>
-			{isLogin && <a href="/api/auth/google" className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 text-base font-bold text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"><GoogleMark /> Continue with Google</a>}
+			{isLogin && <a href="/api/auth/google" className="flex h-14 w-full items-center justify-center gap-3 rounded-md border border-black/15 bg-white px-5 text-base font-bold text-black transition hover:border-black/35 hover:bg-slate-50"><GoogleMark /> Continue with Google</a>}
 			{submitted && <p className="rounded-xl bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-800">{isLogin ? "Logged in successfully." : "Account created successfully."}</p>}
 			{error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p>}
 		</form>
@@ -138,7 +138,7 @@ function Field({ label, name, type, placeholder }: { label: string; name: string
 	return (
 		<label className="block space-y-2 text-sm font-bold text-slate-800">
 			{label}
-			<input required name={name} type={type} placeholder={placeholder} className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-sky-600 focus:bg-white focus:ring-4 focus:ring-sky-100" />
+			<input required name={name} type={type} placeholder={placeholder} className="h-14 w-full rounded-md border border-black/15 bg-white px-4 text-base font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black focus:ring-2 focus:ring-rose-100" />
 		</label>
 	);
 }

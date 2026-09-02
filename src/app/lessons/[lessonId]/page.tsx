@@ -20,9 +20,14 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
         </div>
         <h1 className="mt-5 text-4xl font-black tracking-tight">{lesson.title}</h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">{lesson.description}</p>
-        {lesson.video_url ? (
+        {lesson.is_free && lesson.video_url ? (
           <div className="mt-8 overflow-hidden rounded-3xl bg-slate-950">
             <video controls autoPlay className="aspect-video w-full" src={lesson.video_url} />
+          </div>
+        ) : !lesson.is_free ? (
+          <div className="mt-8 rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center">
+            <p className="font-semibold text-amber-900">Enrol in this course to unlock this lesson.</p>
+            {lesson.course_id ?? lesson.courseId ? <Link href={`/register?course=${lesson.course_id ?? lesson.courseId}`} className="mt-4 inline-flex rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-teal-700">Enrol in this course</Link> : null}
           </div>
         ) : (
           <div className="mt-8 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center text-slate-500">This lesson does not have a video URL yet.</div>

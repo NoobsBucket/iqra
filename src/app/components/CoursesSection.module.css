@@ -5,8 +5,8 @@
   --course-gold: #c9972a;
   --course-muted: #6b7280;
   --course-border: #e5e7eb;
-  --course-radius-sm: 12px;
-  --course-radius-lg: 18px;
+  --course-radius-sm: 6px;
+  --course-radius-lg: 6px;
   background: var(--course-white);
   padding: 6rem 2rem;
   font-family: var(--font-jost), sans-serif;
@@ -79,6 +79,10 @@
   gap: 24px;
 }
 
+.viewAll {
+  margin: 2rem auto 0;
+}
+
 .card {
   border: 1px solid var(--course-border);
   border-radius: var(--course-radius-lg);
@@ -89,7 +93,6 @@
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(13, 31, 45, 0.1);
   border-color: rgba(30, 107, 107, 0.3);
 }
 
@@ -98,6 +101,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #e8f3f0;
   font-size: 54px;
 }
 
@@ -268,7 +272,15 @@
 
 @media (max-width: 600px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, calc((100vw - 2rem - 12px) / 2));
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100vw - 2rem - 12px) / 2);
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x proximity;
   }
 
   .section {
@@ -276,7 +288,20 @@
   }
 
   .thumb {
-    height: 150px;
+    height: 110px;
+  }
+
+  .card { scroll-snap-align: start; }
+
+  .body { padding: 1rem; }
+
+  .courseTitle { font-size: 15px; }
+
+  .description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .footer {
@@ -287,5 +312,10 @@
   .btnEnrol {
     width: 100%;
     text-align: center;
+  }
+
+  .viewAll {
+    display: block;
+    width: fit-content;
   }
 }

@@ -37,9 +37,9 @@ export default function LogoutPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-12">
-      <div className="mx-auto max-w-md rounded-[2rem] border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm font-semibold text-slate-700">{message}</p>
+    <main className="min-h-screen bg-[#f5f7f2] px-4 py-12 text-black" style={{ fontFamily: "var(--font-jost), sans-serif" }}>
+      <div className="mx-auto max-w-md rounded-md border border-black/15 bg-white p-8 text-center">
+        <p className="text-sm font-bold text-black">{message}</p>
       </div>
     </main>
   );

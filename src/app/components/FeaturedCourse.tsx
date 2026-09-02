@@ -41,7 +41,10 @@ export default async function FeaturedCourse() {
           </ul>
           <div className={styles.priceRow}>
             <div className={styles.price}><strong>${Number(price ?? 0).toFixed(2)}</strong><span>/ month</span></div>
-            <Link href={`/register?course=${course.id}`} className={styles.btnCta}>Begin Hifz journey <span aria-hidden="true">→</span></Link>
+            <div className={styles.actions}>
+              <Link href={`/payment?course=${course.id}`} className={styles.btnCta}>Begin Hifz journey <span aria-hidden="true">→</span></Link>
+              <Link href={`/courses/${course.id}`} className={styles.btnDetails}>View details</Link>
+            </div>
           </div>
         </div>
         <div className={styles.visual}>

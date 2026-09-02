@@ -3,8 +3,18 @@ import { notFound } from "next/navigation";
 import { getCourseById, getCourseLessons } from "@/lib/api";
 import { LessonCard } from "@/components/lesson-card";
 import { CourseReviews } from "@/components/course-reviews";
+import { HeaderNavigationBase } from "../../components/application/app-navigation/header-navigation";
 
 export const dynamic = "force-dynamic";
+
+const navItems = [
+  { label: "Home", href: "/" },
+  { label: "About", href: "/aboutus" },
+  { label: "Courses", href: "/courses" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contactus" },
+];
 
 export default async function CourseDetailPage({
   params,
@@ -21,7 +31,9 @@ export default async function CourseDetailPage({
   const lessons = await getCourseLessons(courseId);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-12 text-slate-900">
+    <>
+      <HeaderNavigationBase items={navItems} activeUrl="/courses" />
+      <main className="min-h-screen bg-slate-50 px-4 py-12 text-slate-900">
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -93,6 +105,7 @@ export default async function CourseDetailPage({
           totalStudents={typeof (course as unknown as { total_students?: number }).total_students === "number" ? (course as unknown as { total_students?: number }).total_students : 1000}
         />
       </div>
-    </main>
+      </main>
+    </>
   );
 }

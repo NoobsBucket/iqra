@@ -2,8 +2,20 @@ import { ProductCard, type Product } from "./product-card";
 import styles from "./CoursesSection.module.css";
 import { getCourses } from "@/lib/api";
 
-export async function CategoryRender() {
-	const productList = (await getCourses()) as Product[];
+function shuffleProducts(products: Product[]): Product[] {
+	const shuffled = [...products];
+
+	for (let index = shuffled.length - 1; index > 0; index -= 1) {
+		const randomIndex = Math.floor(Math.random() * (index + 1));
+		[shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+	}
+
+	return shuffled;
+}
+
+export async function CategoryRender({ limit }: { limit?: number }) {
+	const productList = shuffleProducts((await getCourses()) as Product[]);
+	const visibleProducts = typeof limit === "number" ? productList.slice(0, limit) : productList;
 
 	return (
 		<section className={styles.section} id="courses">
@@ -16,7 +28,7 @@ export async function CategoryRender() {
 					</div>
 				</div>
 				<div className={styles.grid}>
-					{productList.map((product) => (
+					{visibleProducts.map((product) => (
 						<ProductCard key={product.id} product={product} />
 					))}
 				</div>
