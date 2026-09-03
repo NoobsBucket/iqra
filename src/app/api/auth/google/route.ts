@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UPSTREAM_API_BASE_URL } from "@/lib/api";
+import { normalizeApiUrl, UPSTREAM_API_BASE_URL } from "@/lib/api";
 
 const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -210,16 +210,23 @@ export async function GET(request: NextRequest) {
     }
     const savedData = saved.data && typeof saved.data === "object" ? (saved.data as Record<string, unknown>) : undefined;
     const savedUser = (saved.user as Record<string, unknown> | undefined) ?? savedData ?? saved;
+    const role = String(
+      savedUser.role ?? savedUser.user_role ?? savedUser.role_name ?? savedData?.role ?? savedData?.user_role ?? "user"
+    )
+      .trim()
+      .toLowerCase() || "user";
     const user = {
       id: String(savedUser.id ?? savedUser.user_id ?? `google-${profile.sub}`),
       name: String(savedUser.name ?? profile.name ?? profile.email.split("@")[0]),
       email: String(savedUser.email ?? profile.email),
-      avatar: String(savedUser.avatar_url ?? profile.picture ?? ""),
+      avatar: normalizeApiUrl(String(savedUser.avatar_url ?? savedUser.avatar ?? profile.picture ?? "")) ?? "",
+      role,
     };
 
+    const secureCookie = request.nextUrl.protocol === "https:" ? "; Secure" : "";
     const escapedUser = JSON.stringify(user).replace(/</g, "\\u003c");
     return new NextResponse(
-      `<!doctype html><script>localStorage.setItem("iqra-user",${JSON.stringify(escapedUser)});window.dispatchEvent(new Event("iqra-user-changed"));window.location.replace("/");</script>`,
+      `<!doctype html><script>const userData=${JSON.stringify(escapedUser)};const parsed=JSON.parse(userData);localStorage.setItem("iqra-user",JSON.stringify(parsed));document.cookie = "iqra-role=" + encodeURIComponent(parsed.role || "user") + "; path=/; SameSite=Lax${secureCookie}";window.dispatchEvent(new Event("iqra-user-changed"));window.location.replace("/");</script>`,
       { headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
   } catch (oauthError) {

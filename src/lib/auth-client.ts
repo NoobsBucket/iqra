@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeApiUrl } from "@/lib/api";
+
 export type AuthUser = {
   id: string;
   name: string;
@@ -36,17 +38,27 @@ function normalizeUser(payload: unknown): AuthUser | null {
 
   if (!id && !email) return null;
 
+  const roleValue =
+    typeof candidate.role === "string"
+      ? candidate.role
+      : typeof candidate.user_role === "string"
+        ? candidate.user_role
+        : typeof candidate.role_name === "string"
+          ? candidate.role_name
+          : undefined;
+
   return {
     id: String(id || email),
     name,
     email,
-    role: typeof candidate.role === "string" ? candidate.role : undefined,
-    avatar:
+    role: roleValue,
+    avatar: normalizeApiUrl(
       typeof candidate.avatar === "string"
         ? candidate.avatar
         : typeof candidate.avatar_url === "string"
           ? candidate.avatar_url
-          : undefined,
+          : undefined
+    ),
   };
 }
 

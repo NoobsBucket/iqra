@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { API_BASE_URL, getApiError } from "@/lib/api";
+import { API_BASE_URL, getApiError, normalizeApiUrl } from "@/lib/api";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 	const isLogin = mode === "login";
@@ -37,7 +37,15 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 							? loginResult.error
 							: "";
 				const nestedUser = (loginResult.user as Record<string, unknown> | undefined) ?? loginResult;
-				const role = typeof nestedUser.role === "string" ? nestedUser.role.toLowerCase() : "user";
+				const roleValue =
+					typeof nestedUser.role === "string"
+						? nestedUser.role
+						: typeof nestedUser.user_role === "string"
+							? nestedUser.user_role
+							: typeof nestedUser.role_name === "string"
+								? nestedUser.role_name
+								: "user";
+				const role = roleValue.toLowerCase();
 				const loginFailed =
 					Boolean(loginResult.success === false) ||
 					/invalid|incorrect|wrong|failed|not found|unauthorized/i.test(loginMessage) ||
@@ -57,6 +65,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
 				const user = (loginResult.user as Record<string, unknown> | undefined) ?? loginResult;
 				const userId = user.id ?? user.uuid ?? user.user_id ?? loginResult.user_id;
+				const normalizedAvatar = normalizeApiUrl(
+					typeof user.avatar_url === "string"
+						? user.avatar_url
+						: typeof user.avatar === "string"
+							? user.avatar
+							: typeof user.profile_image === "string"
+								? user.profile_image
+								: typeof user.profile_picture === "string"
+									? user.profile_picture
+									: undefined
+				);
 				if (!userId && !loginResult.token && !loginResult.access_token && !loginResult.session) {
 					throw new Error("Login response was incomplete.");
 				}
@@ -66,16 +85,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 						id: String(userId),
 						name: String(user.name ?? user.full_name ?? user.username ?? user.email ?? "Account"),
 						email: typeof user.email === "string" ? user.email : "",
-						avatar:
-							typeof user.avatar_url === "string"
-								? user.avatar_url
-								: typeof user.avatar === "string"
-									? user.avatar
-									: typeof user.profile_image === "string"
-										? user.profile_image
-										: typeof user.profile_picture === "string"
-											? user.profile_picture
-											: undefined,
+						avatar: normalizedAvatar,
 						role: role,
 					};
 

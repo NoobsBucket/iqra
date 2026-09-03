@@ -9,6 +9,34 @@ export const UPSTREAM_API_BASE_URL = (configuredApiBaseUrl || "https://api.iqrai
 
 export const API_BASE_URL = "/api/proxy";
 
+export function normalizeApiUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+
+  const value = url.trim();
+  if (!value) return undefined;
+
+  if (!/^https?:\/\//i.test(value)) {
+    if (value.startsWith("/")) {
+      return `${UPSTREAM_API_BASE_URL}${value}`;
+    }
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+    const isLocalBackend = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.port === "4000";
+
+    if (!isLocalBackend) {
+      return value;
+    }
+
+    const upstreamOrigin = new URL(UPSTREAM_API_BASE_URL).origin;
+    return new URL(`${parsed.pathname}${parsed.search}${parsed.hash}`, upstreamOrigin).toString();
+  } catch {
+    return value;
+  }
+}
+
 function getServerApiBaseUrl(): string {
   return UPSTREAM_API_BASE_URL;
 }

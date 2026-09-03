@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeApiUrl } from "@/lib/api";
 import {
   createContext,
   useContext,
@@ -40,7 +41,7 @@ function readStoredUser(): AuthUser | null {
       id,
       name,
       email,
-      avatar: typeof parsed.avatar === "string" ? parsed.avatar : undefined,
+      avatar: normalizeApiUrl(typeof parsed.avatar === "string" ? parsed.avatar : undefined),
       role: typeof parsed.role === "string" ? parsed.role : undefined,
     };
   } catch {
