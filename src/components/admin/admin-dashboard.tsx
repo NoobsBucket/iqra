@@ -14,6 +14,9 @@ const defaultCourseForm = {
   currency: "USD",
   category_id: "",
   image_url: "",
+  meta_title: "",
+  meta_description: "",
+  meta_keywords: "",
 };
 
 const defaultLessonForm = {
@@ -45,6 +48,9 @@ const defaultSettingsForm: SettingsRecord = {
   logo_url: DEFAULT_SETTINGS.logo_url,
   primary_color: DEFAULT_SETTINGS.primary_color,
   secondary_color: DEFAULT_SETTINGS.secondary_color,
+  default_meta_title: DEFAULT_SETTINGS.default_meta_title,
+  default_meta_description: DEFAULT_SETTINGS.default_meta_description,
+  default_meta_keywords: DEFAULT_SETTINGS.default_meta_keywords,
 };
 
 const defaultBlogForm = {
@@ -274,6 +280,9 @@ export function AdminDashboard() {
         discount_price: discountPrice,
         currency: courseForm.currency,
         category_ids: [selectedCategoryId],
+        meta_title: courseForm.meta_title || null,
+        meta_description: courseForm.meta_description || null,
+        meta_keywords: courseForm.meta_keywords || null,
       };
 
       const created = await apiRequest<CourseRecord>("/v1/courses", "POST", payload);
@@ -315,6 +324,9 @@ export function AdminDashboard() {
     }
     if (courseForm.currency !== (course.currency ?? "USD")) changes.currency = courseForm.currency;
     if (courseForm.image_url !== (course.image_url ?? course.image ?? "")) changes.image_url = courseForm.image_url || null;
+    if (courseForm.meta_title !== (course.meta_title ?? "")) changes.meta_title = courseForm.meta_title.trim() || null;
+    if (courseForm.meta_description !== (course.meta_description ?? "")) changes.meta_description = courseForm.meta_description.trim() || null;
+    if (courseForm.meta_keywords !== (course.meta_keywords ?? "")) changes.meta_keywords = courseForm.meta_keywords.trim() || null;
     const originalCategory = course.category_ids?.[0] ?? course.categoryId ?? course.category_id ?? "";
     if (courseForm.category_id !== originalCategory) {
       changes.category_ids = courseForm.category_id ? [courseForm.category_id] : [];
@@ -349,6 +361,9 @@ export function AdminDashboard() {
       currency: course.currency ?? "USD",
       category_id: selectedCategory,
       image_url: course.image_url ?? "",
+      meta_title: course.meta_title ?? "",
+      meta_description: course.meta_description ?? "",
+      meta_keywords: course.meta_keywords ?? "",
     });
   };
 
@@ -540,6 +555,7 @@ export function AdminDashboard() {
         category_id: blogForm.category_id,
         meta_title: blogForm.meta_title || null,
         meta_description: blogForm.meta_description || null,
+        meta_keywords: blogForm.meta_keywords || null,
       });
       setBlogPosts((current) => [created, ...current]);
       setBlogForm(defaultBlogForm);
@@ -638,6 +654,9 @@ export function AdminDashboard() {
             <input value={settingsForm.site_name ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, site_name: event.target.value }))} placeholder="Site name" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.site_email ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, site_email: event.target.value }))} placeholder="Site email" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.site_phone ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, site_phone: event.target.value }))} placeholder="Site phone" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <input value={settingsForm.default_meta_title ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, default_meta_title: event.target.value }))} placeholder="Default SEO title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <input value={settingsForm.default_meta_description ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, default_meta_description: event.target.value }))} placeholder="Default SEO description" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <input value={settingsForm.default_meta_keywords ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, default_meta_keywords: event.target.value }))} placeholder="Default SEO keywords" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.whatsapp_number ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, whatsapp_number: event.target.value }))} placeholder="WhatsApp number" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.facebook_url ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, facebook_url: event.target.value }))} placeholder="Facebook URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.instagram_url ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, instagram_url: event.target.value }))} placeholder="Instagram URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
@@ -662,8 +681,14 @@ export function AdminDashboard() {
             <input value={blogForm.excerpt} onChange={(event) => setBlogForm((current) => ({ ...current, excerpt: event.target.value }))} placeholder="Short summary" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none md:col-span-2" />
             <textarea value={blogForm.content} onChange={(event) => setBlogForm((current) => ({ ...current, content: event.target.value }))} placeholder="Full content" className="min-h-40 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none md:col-span-2" />
             <MediaUpload label="Blog cover image" mediaType="image" value={blogForm.cover_image} onChange={(cover_image) => setBlogForm((current) => ({ ...current, cover_image }))} />
-            <input value={blogForm.meta_title} onChange={(event) => setBlogForm((current) => ({ ...current, meta_title: event.target.value }))} placeholder="SEO meta title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
-            <input value={blogForm.meta_description} onChange={(event) => setBlogForm((current) => ({ ...current, meta_description: event.target.value }))} placeholder="SEO meta description" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-slate-500"><span>SEO title</span><span>{blogForm.meta_title.length}/70</span></div>
+              <input value={blogForm.meta_title} onChange={(event) => setBlogForm((current) => ({ ...current, meta_title: event.target.value }))} placeholder="SEO meta title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-slate-500"><span>SEO description</span><span>{blogForm.meta_description.length}/170</span></div>
+              <input value={blogForm.meta_description} onChange={(event) => setBlogForm((current) => ({ ...current, meta_description: event.target.value }))} placeholder="SEO meta description" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            </div>
             <input value={blogForm.meta_keywords} onChange={(event) => setBlogForm((current) => ({ ...current, meta_keywords: event.target.value }))} placeholder="SEO keywords, comma separated" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           </div>
           <button onClick={handleCreateBlogPost} className="mt-4 rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">Create blog draft</button>
@@ -717,6 +742,20 @@ export function AdminDashboard() {
               </select>
             </div>
             <MediaUpload label="Course image" mediaType="image" value={courseForm.image_url} onChange={(image_url) => setCourseForm((current) => ({ ...current, image_url }))} />
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.18em] text-slate-600">SEO</h3>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500"><span>Meta title</span><span>{courseForm.meta_title.length}/70</span></div>
+                  <input value={courseForm.meta_title} onChange={(event) => setCourseForm((current) => ({ ...current, meta_title: event.target.value }))} placeholder="SEO meta title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500"><span>Meta description</span><span>{courseForm.meta_description.length}/170</span></div>
+                  <textarea value={courseForm.meta_description} onChange={(event) => setCourseForm((current) => ({ ...current, meta_description: event.target.value }))} placeholder="SEO meta description" className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+                </div>
+                <input value={courseForm.meta_keywords} onChange={(event) => setCourseForm((current) => ({ ...current, meta_keywords: event.target.value }))} placeholder="SEO keywords, comma separated" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+              </div>
+            </div>
             <div className="flex flex-wrap gap-3">
               <button onClick={() => editingCourseId ? handleUpdateCourse(editingCourseId) : handleCreateCourse()} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">{editingCourseId ? "Update course" : "Create course"}</button>
               {editingCourseId ? <button onClick={() => { setEditingCourseId(""); setCourseForm(defaultCourseForm); }} className="rounded-xl border border-slate-200 px-4 py-2 font-semibold text-slate-700">New course</button> : null}
@@ -770,7 +809,7 @@ export function AdminDashboard() {
           <textarea value={lessonForm.description} onChange={(event) => setLessonForm((current) => ({ ...current, description: event.target.value }))} placeholder="Lesson description" className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           <div className="grid gap-4 md:grid-cols-2">
             <MediaUpload label="Lesson video" mediaType="video" value={lessonForm.video_url} onChange={(video_url) => setLessonForm((current) => ({ ...current, video_url }))} />
-            <MediaUpload label="Lesson thumbnail" mediaType="image" value={lessonForm.thumbnail_url} cropAspect={16 / 9} onChange={(thumbnail_url) => setLessonForm((current) => ({ ...current, thumbnail_url }))} />
+            <MediaUpload label="Lesson thumbnail" mediaType="image" value={lessonForm.thumbnail_url} cropAspect={16 / 9} onChange={(thumbnail_url) => setLessonForm((current) => ({ ...current, thumbnail_url }))} allowedTypes={["image/jpeg", "image/png", "image/webp"]} maxSize={2 * 1024 * 1024} />
           </div>
           <select value={lessonForm.is_free} onChange={(event) => setLessonForm((current) => ({ ...current, is_free: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none md:max-w-xs">
             <option value="true">Free lesson</option>

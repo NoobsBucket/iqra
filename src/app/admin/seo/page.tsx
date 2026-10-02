@@ -1,5 +1,5 @@
-import { AdminDashboard } from "@/components/admin/admin-dashboard";
 import { HeaderNavigationBase } from "@/app/components/application/app-navigation/header-navigation";
+import { SeoSettingsDashboard } from "@/components/admin/seo-settings";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -8,11 +8,11 @@ const navItems = [
   { label: "SEO Settings", href: "/admin/seo" },
 ];
 
-export default function AdminPage() {
+export default function SeoPage() {
   return (
     <div className="min-h-screen bg-slate-100 [font-family:var(--font-jost),sans-serif]">
-      <HeaderNavigationBase items={navItems} activeUrl="/admin" />
-      <AdminDashboard />
+      <HeaderNavigationBase items={navItems} activeUrl="/admin/seo" />
+      <SeoSettingsDashboard />
     </div>
   );
 }

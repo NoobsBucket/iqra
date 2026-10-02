@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export type LessonCardProps = {
@@ -28,8 +29,14 @@ export function LessonCard({ lesson, index, courseId, courseTitle }: LessonCardP
   return (
     <article className="overflow-hidden rounded-md border border-black/15 bg-white transition hover:-translate-y-0.5 hover:border-black/35">
       <div className="relative aspect-video bg-slate-950">
-        {thumbnailUrl ? <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" /> : videoUrl ? <video muted preload="metadata" className="h-full w-full object-cover" src={videoUrl} /> : <div className="flex h-full items-center justify-center text-5xl">▶</div>}
-        <span className="absolute bottom-3 left-3 rounded-full bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Video lesson</span>
+        {thumbnailUrl ? (
+          <Image src={thumbnailUrl} alt={lesson.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 33vw" />
+        ) : videoUrl ? (
+          <video muted preload="metadata" className="h-full w-full object-cover" src={videoUrl} />
+        ) : (
+          <div className="flex h-full items-center justify-center text-5xl text-white/80">▶</div>
+        )}
+        <span className="absolute bottom-3 left-3 z-10 rounded-full bg-slate-950/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">Video lesson</span>
       </div>
       <div className="p-5 max-sm:p-3">
       <div className="mb-4 flex items-center justify-between gap-3 max-sm:mb-2">

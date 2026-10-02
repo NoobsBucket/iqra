@@ -83,6 +83,7 @@ export function BlogPanel() {
         category_id: form.category_id,
         meta_title: form.meta_title || null,
         meta_description: form.meta_description || null,
+        meta_keywords: form.meta_keywords || null,
       };
 
       if (selectedPostId) {
@@ -200,7 +201,7 @@ export function BlogPanel() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Meta title</span>
+              <span className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-700"><span>Meta title</span><span className="text-xs text-slate-500">{form.meta_title.length}/70</span></span>
               <input
                 value={form.meta_title}
                 onChange={(event) => setForm((current) => ({ ...current, meta_title: event.target.value }))}
@@ -220,7 +221,7 @@ export function BlogPanel() {
             </label>
 
             <label className="md:col-span-2 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Meta description</span>
+              <span className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-700"><span>Meta description</span><span className="text-xs text-slate-500">{form.meta_description.length}/170</span></span>
               <textarea
                 value={form.meta_description}
                 onChange={(event) => setForm((current) => ({ ...current, meta_description: event.target.value }))}

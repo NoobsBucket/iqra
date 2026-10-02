@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBlogPost } from "@/lib/api";
+import { getBlogPost, getSeoPage, getSettings } from "@/lib/api";
 import { HeaderNavigationBase } from "../../components/application/app-navigation/header-navigation";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +16,24 @@ const navItems = [
 
 export async function generateMetadata({ params }: { params: Promise<{ blog: string }> }): Promise<Metadata> {
   const { blog } = await params;
-  const post = await getBlogPost(blog);
+  const [post, seoRecord, settings] = await Promise.all([getBlogPost(blog), getSeoPage(`/blog/${blog}`), getSettings()]);
+  const defaultTitle = post?.meta_title ?? post?.title ?? "Blog article";
+  const defaultDescription = post?.meta_description ?? post?.excerpt ?? (post?.content ? post.content.slice(0, 160) : "Read the latest insights from Iqra International.");
+  const title = post?.meta_title ?? seoRecord?.meta_title ?? defaultTitle;
+  const description = post?.meta_description ?? seoRecord?.meta_description ?? defaultDescription;
+  const keywords = post?.meta_keywords ? post.meta_keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean) : seoRecord?.meta_keywords ? seoRecord.meta_keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean) : settings.default_meta_keywords ? settings.default_meta_keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean) : ["blog", "islamic learning"];
+
   return {
-    title: post?.meta_title ?? post?.title ?? "Blog article",
-    description: post?.meta_description ?? post?.excerpt ?? post?.content.slice(0, 160),
-    keywords: post?.meta_keywords?.split(",").map((keyword) => keyword.trim()).filter(Boolean),
-    openGraph: post ? { title: post.meta_title ?? post.title, description: post.meta_description ?? post.excerpt, images: post.cover_image ? [post.cover_image] : undefined } : undefined,
+    title,
+    description,
+    keywords,
+    robots: seoRecord?.robots ?? "index,follow",
+    alternates: { canonical: seoRecord?.canonical_url ?? `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://iqrainternationalislamicinstitute.com"}/blog/${blog}` },
+    openGraph: {
+      title: seoRecord?.og_title ?? post?.meta_title ?? post?.title ?? title,
+      description: seoRecord?.og_description ?? post?.meta_description ?? description,
+      images: post?.cover_image ? [post.cover_image] : seoRecord?.og_image ? [seoRecord.og_image] : undefined,
+    },
   };
 }
 
@@ -35,9 +47,14 @@ export default async function BlogPostPage({
 
   if (!post) notFound();
 
+  const seoRecord = await getSeoPage(`/blog/${blog}`);
+  const jsonLdValue = seoRecord?.json_ld ?? post.json_ld;
+  const jsonLdScript = typeof jsonLdValue === "string" ? jsonLdValue : jsonLdValue ? JSON.stringify(jsonLdValue) : "";
+
   return (
     <>
       <HeaderNavigationBase items={navItems} activeUrl="/blog" />
+      {jsonLdScript ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript }} /> : null}
       <main className="min-h-screen bg-[#f5f7f2] px-5 py-12 font-medium text-[#102b2a] [font-family:var(--font-jost),sans-serif] md:px-10 md:py-20 [&_h1]:font-bold [&_a]:font-medium">
         <article className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-[#dce5df] bg-white shadow-[0_24px_70px_rgba(16,43,42,0.09)]">
           {post.cover_image ? <img src={post.cover_image} alt={post.title} className="max-h-[34rem] w-full object-cover" /> : <div className="h-48 bg-[linear-gradient(135deg,#d9ebe1,#f4eac6)] md:h-64" />}

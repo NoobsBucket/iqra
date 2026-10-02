@@ -1,9 +1,32 @@
 "use client";
 
+import type { Metadata } from "next";
 import { useRef, useState } from "react";
 import { ArrowUpRight, BookOpen, CheckCircle2, Mail, MessageCircle, Phone } from "lucide-react";
 import { HeaderNavigationBase } from "../components/application/app-navigation/header-navigation";
-import { API_BASE_URL, getApiError } from "@/lib/api";
+import { API_BASE_URL, getApiError, getSeoPage, getSettings } from "@/lib/api";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [seoRecord, settings] = await Promise.all([getSeoPage("/contactus"), getSettings()]);
+  const defaultTitle = settings.default_meta_title ?? "Contact Iqra International";
+  const defaultDescription = settings.default_meta_description ?? "Contact the Iqra team to ask about courses, guidance, and personalised learning support.";
+  const title = seoRecord?.meta_title ?? defaultTitle;
+  const description = seoRecord?.meta_description ?? defaultDescription;
+  const keywords = seoRecord?.meta_keywords ? seoRecord.meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : settings.default_meta_keywords ? settings.default_meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : ["contact", "support", "islamic courses"];
+
+  return {
+    title,
+    description,
+    keywords,
+    robots: seoRecord?.robots ?? "index,follow",
+    alternates: { canonical: seoRecord?.canonical_url ?? `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://iqrainternationalislamicinstitute.com"}/contactus` },
+    openGraph: {
+      title: seoRecord?.og_title ?? title,
+      description: seoRecord?.og_description ?? description,
+      images: seoRecord?.og_image ? [seoRecord.og_image] : undefined,
+    },
+  };
+}
 
 const navItems = [
   { label: "Home", href: "/" },

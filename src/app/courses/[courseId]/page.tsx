@@ -1,6 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCourseById, getCourseLessons } from "@/lib/api";
+import { getCourseById, getCourseLessons, getSeoPage, getSettings } from "@/lib/api";
 import { LessonCard } from "@/components/lesson-card";
 import { CourseReviews } from "@/components/course-reviews";
 import { HeaderNavigationBase } from "../../components/application/app-navigation/header-navigation";
@@ -15,6 +16,29 @@ const navItems = [
   { label: "Contact", href: "/contactus" },
 ];
 
+export async function generateMetadata({ params }: { params: Promise<{ courseId: string }> }): Promise<Metadata> {
+  const { courseId } = await params;
+  const [course, seoRecord, settings] = await Promise.all([getCourseById(courseId), getSeoPage(`/courses/${courseId}`), getSettings()]);
+  const fallbackTitle = course?.meta_title ?? course?.title ?? "Course";
+  const fallbackDescription = course?.meta_description ?? course?.description ?? "Learn with structured, practical guidance.";
+  const title = course?.meta_title ?? seoRecord?.meta_title ?? fallbackTitle;
+  const description = course?.meta_description ?? seoRecord?.meta_description ?? fallbackDescription;
+  const keywords = course?.meta_keywords ? course.meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : seoRecord?.meta_keywords ? seoRecord.meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : settings.default_meta_keywords ? settings.default_meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : ["course", "islamic learning"];
+
+  return {
+    title,
+    description,
+    keywords,
+    robots: seoRecord?.robots ?? "index,follow",
+    alternates: { canonical: seoRecord?.canonical_url ?? `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://iqrainternationalislamicinstitute.com"}/courses/${courseId}` },
+    openGraph: {
+      title: seoRecord?.og_title ?? course?.meta_title ?? course?.title ?? title,
+      description: seoRecord?.og_description ?? course?.meta_description ?? description,
+      images: course?.image_url ? [course.image_url] : seoRecord?.og_image ? [seoRecord.og_image] : undefined,
+    },
+  };
+}
+
 export default async function CourseDetailPage({
   params,
 }: {
@@ -28,10 +52,14 @@ export default async function CourseDetailPage({
   }
 
   const lessons = await getCourseLessons(courseId);
+  const seoRecord = await getSeoPage(`/courses/${courseId}`);
+  const jsonLdValue = seoRecord?.json_ld ?? course.json_ld;
+  const jsonLdScript = typeof jsonLdValue === "string" ? jsonLdValue : jsonLdValue ? JSON.stringify(jsonLdValue) : "";
 
   return (
     <>
       <HeaderNavigationBase items={navItems} activeUrl="/courses" />
+      {jsonLdScript ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript }} /> : null}
       <main className="min-h-screen bg-slate-50 px-4 py-12 text-slate-900">
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
@@ -50,7 +78,7 @@ export default async function CourseDetailPage({
                 {course.image_url ? (
                   <img src={course.image_url} alt={course.title} className="h-64 w-full object-cover" />
                 ) : (
-                  <div className="flex h-64 items-center justify-center text-6xl text-slate-700">{course.emoji ?? "📖"}</div>
+                  <div className="flex h-64 items-center justify-center bg-slate-100 text-lg font-semibold uppercase tracking-[0.22em] text-slate-500">Course</div>
                 )}
               </div>
               <h1 className="text-4xl font-black tracking-tight text-slate-900">{course.title}</h1>

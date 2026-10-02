@@ -90,12 +90,26 @@ export const HeaderNavigationBase = ({
 
     useEffect(() => {
         let isMounted = true;
+        const cachedBrand = (() => {
+            if (typeof window === "undefined") return null;
+            try {
+                const value = window.localStorage.getItem("iqra-site-brand-cache");
+                return value ? (JSON.parse(value) as { logoUrl?: string }) : null;
+            } catch {
+                return null;
+            }
+        })();
+
+        if (cachedBrand?.logoUrl) {
+            setLogoUrl(cachedBrand.logoUrl);
+        }
 
         const loadSettings = () => getSettings()
             .then((settings) => {
                 if (!isMounted) return;
                 setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
-                setLogoUrl(settings.logo_url ?? "");
+                const nextLogoUrl = settings.logo_url ?? settings.logoUrl ?? "";
+                setLogoUrl(nextLogoUrl);
             })
             .catch(() => undefined);
 

@@ -82,6 +82,10 @@ export type CourseRecord = {
   lessons?: number;
   is_published?: boolean;
   created_by?: string;
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  json_ld?: string | Record<string, unknown> | null;
 };
 
 export type LessonRecord = {
@@ -129,6 +133,7 @@ export type BlogPostRecord = {
   published_at?: string;
   created_at?: string;
   updated_at?: string;
+  json_ld?: string | Record<string, unknown> | null;
 };
 
 export type EnrollmentRecord = {
@@ -183,8 +188,14 @@ export type SettingsRecord = {
   facebook_url?: string;
   instagram_url?: string;
   logo_url?: string;
+  logoUrl?: string;
+  favicon_url?: string;
+  faviconUrl?: string;
   primary_color?: string;
   secondary_color?: string;
+  default_meta_title?: string;
+  default_meta_description?: string;
+  default_meta_keywords?: string;
 };
 
 export const DEFAULT_SETTINGS: SettingsRecord = {
@@ -201,6 +212,9 @@ export const DEFAULT_SETTINGS: SettingsRecord = {
   logo_url: "",
   primary_color: "#0f172a",
   secondary_color: "#2563eb",
+  default_meta_title: "Iqra International | Quran and Islamic Learning",
+  default_meta_description: "Learn Quranic recitation, Islamic studies, and purposeful guidance through structured online courses for all ages.",
+  default_meta_keywords: "quran, islamic studies, online courses, deen, learning",
 };
 
 export function normalizeSettings(value: unknown): SettingsRecord {
@@ -209,12 +223,21 @@ export function normalizeSettings(value: unknown): SettingsRecord {
   for (let depth = 0; depth < 3; depth += 1) {
     if (!current || typeof current !== "object" || Array.isArray(current)) break;
     const record = current as Record<string, unknown>;
-    const nested = record.settings ?? record.data;
+    const nested = record.settings ?? record.data ?? record.result;
     if (nested && typeof nested === "object" && !Array.isArray(nested)) {
       current = nested;
       continue;
     }
-    return { ...DEFAULT_SETTINGS, ...record } as SettingsRecord;
+
+    return {
+      ...DEFAULT_SETTINGS,
+      ...record,
+      logo_url: typeof record.logo_url === "string" ? record.logo_url : typeof record.logoUrl === "string" ? record.logoUrl : DEFAULT_SETTINGS.logo_url,
+      favicon_url: typeof record.favicon_url === "string" ? record.favicon_url : typeof record.faviconUrl === "string" ? record.faviconUrl : undefined,
+      default_meta_title: typeof record.default_meta_title === "string" ? record.default_meta_title : DEFAULT_SETTINGS.default_meta_title,
+      default_meta_description: typeof record.default_meta_description === "string" ? record.default_meta_description : DEFAULT_SETTINGS.default_meta_description,
+      default_meta_keywords: typeof record.default_meta_keywords === "string" ? record.default_meta_keywords : DEFAULT_SETTINGS.default_meta_keywords,
+    } as SettingsRecord;
   }
 
   return { ...DEFAULT_SETTINGS };
@@ -234,6 +257,23 @@ function normalizeCategory(item: Partial<CategoryRecord> & Record<string, unknow
     slug: typeof item.slug === "string" ? item.slug : undefined,
   };
 }
+
+export type SeoRecord = {
+  id?: string;
+  page_name?: string;
+  page_path?: string;
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  og_title?: string;
+  og_description?: string;
+  og_image?: string;
+  canonical_url?: string;
+  robots?: string;
+  json_ld?: string | Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string;
+};
 
 export function normalizeCourse(item: Partial<CourseRecord> & Record<string, unknown>): CourseRecord {
   const name = String(item.title ?? item.name ?? "Course");
@@ -296,6 +336,10 @@ export function normalizeCourse(item: Partial<CourseRecord> & Record<string, unk
     lessons: typeof item.lessons === "number" ? item.lessons : 12,
     is_published: Boolean(item.is_published),
     created_by: typeof item.created_by === "string" ? item.created_by : undefined,
+    meta_title: typeof item.meta_title === "string" ? item.meta_title : undefined,
+    meta_description: typeof item.meta_description === "string" ? item.meta_description : undefined,
+    meta_keywords: typeof item.meta_keywords === "string" ? item.meta_keywords : undefined,
+    json_ld: typeof item.json_ld === "string" || (item.json_ld && typeof item.json_ld === "object") ? item.json_ld : undefined,
   };
 }
 
@@ -386,14 +430,25 @@ export function isUuid(value: string): boolean {
 }
 
 function normalizeLesson(item: Partial<LessonRecord> & Record<string, unknown>): LessonRecord {
+  const videoValue = typeof item.video_url === "string" ? item.video_url : typeof item.videoUrl === "string" ? item.videoUrl : undefined;
+  const thumbnailValue = typeof item.thumbnail_url === "string"
+    ? item.thumbnail_url
+    : typeof item.thumbnailUrl === "string"
+      ? item.thumbnailUrl
+      : typeof item.image_url === "string"
+        ? item.image_url
+        : typeof item.cover_image === "string"
+          ? item.cover_image
+          : undefined;
+
   return {
     id: String(item.id ?? crypto.randomUUID()),
     title: String(item.title ?? item.name ?? "Lesson"),
     description: String(item.description ?? ""),
-    video_url: typeof item.video_url === "string" ? item.video_url : typeof item.videoUrl === "string" ? item.videoUrl : undefined,
-    videoUrl: typeof item.videoUrl === "string" ? item.videoUrl : undefined,
-    thumbnail_url: typeof item.thumbnail_url === "string" ? item.thumbnail_url : undefined,
-    thumbnailUrl: typeof item.thumbnailUrl === "string" ? item.thumbnailUrl : undefined,
+    video_url: videoValue,
+    videoUrl: typeof item.videoUrl === "string" ? item.videoUrl : videoValue,
+    thumbnail_url: thumbnailValue,
+    thumbnailUrl: typeof item.thumbnailUrl === "string" ? item.thumbnailUrl : thumbnailValue,
     order_index: Number.isFinite(Number(item.order_index)) ? Number(item.order_index) : undefined,
     is_free: Boolean(item.is_free ?? item.isFree),
     course_id: typeof item.course_id === "string" ? item.course_id : typeof item.courseId === "string" ? item.courseId : undefined,
@@ -475,6 +530,56 @@ export async function getNotifications(userId: string): Promise<NotificationReco
   } catch (err) {
     logApiFailure(`getNotifications(${userId})`, err);
     return [];
+  }
+}
+
+export function normalizeSeoRecord(value: unknown): SeoRecord | null {
+  if (!value || typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+  const item = record.data && typeof record.data === "object" && !Array.isArray(record.data) ? (record.data as Record<string, unknown>) : record;
+
+  return {
+    id: typeof item.id === "string" ? item.id : undefined,
+    page_name: typeof item.page_name === "string" ? item.page_name : undefined,
+    page_path: typeof item.page_path === "string" ? item.page_path : undefined,
+    meta_title: typeof item.meta_title === "string" ? item.meta_title : undefined,
+    meta_description: typeof item.meta_description === "string" ? item.meta_description : undefined,
+    meta_keywords: typeof item.meta_keywords === "string" ? item.meta_keywords : undefined,
+    og_title: typeof item.og_title === "string" ? item.og_title : undefined,
+    og_description: typeof item.og_description === "string" ? item.og_description : undefined,
+    og_image: typeof item.og_image === "string" ? item.og_image : undefined,
+    canonical_url: typeof item.canonical_url === "string" ? item.canonical_url : undefined,
+    robots: typeof item.robots === "string" ? item.robots : undefined,
+    json_ld: typeof item.json_ld === "string"
+      ? item.json_ld
+      : item.json_ld && typeof item.json_ld === "object" && !Array.isArray(item.json_ld)
+        ? (item.json_ld as Record<string, unknown>)
+        : undefined,
+    created_at: typeof item.created_at === "string" ? item.created_at : undefined,
+    updated_at: typeof item.updated_at === "string" ? item.updated_at : undefined,
+  };
+}
+
+export async function getSeoPage(path: string): Promise<SeoRecord | null> {
+  try {
+    const target = new URL("/api/seo", process.env.API_URL?.trim() || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
+    target.searchParams.set("path", path);
+
+    const response = await fetch(target.toString(), {
+      next: { tags: ["seo"], revalidate: 3600 },
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json();
+    return normalizeSeoRecord(payload);
+  } catch (err) {
+    logApiFailure(`getSeoPage(${path})`, err);
+    return null;
   }
 }
 

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLessons } from "@/lib/api";
@@ -20,9 +21,28 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
         </div>
         <h1 className="mt-5 text-4xl font-black tracking-tight">{lesson.title}</h1>
         <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">{lesson.description}</p>
-        {lesson.is_free && lesson.video_url ? (
+        {lesson.is_free && (lesson.video_url ?? lesson.videoUrl) ? (
           <div className="mt-8 overflow-hidden rounded-3xl bg-slate-950">
-            <video controls autoPlay className="aspect-video w-full" src={lesson.video_url} />
+            <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
+              {(lesson.thumbnail_url ?? lesson.thumbnailUrl) ? (
+                <Image src={lesson.thumbnail_url ?? lesson.thumbnailUrl ?? ""} alt={lesson.title} fill className="object-cover opacity-60" sizes="(max-width: 1024px) 100vw, 80vw" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 text-5xl text-white/75">▶</div>
+              )}
+              <video
+                key={lesson.id}
+                controls
+                autoPlay
+                controlsList="nodownload noplaybackrate"
+                disablePictureInPicture
+                playsInline
+                preload="metadata"
+                poster={lesson.thumbnail_url ?? lesson.thumbnailUrl ?? undefined}
+                onContextMenu={(event) => event.preventDefault()}
+                className="relative z-10 aspect-video h-full w-full object-cover"
+                src={lesson.video_url ?? lesson.videoUrl}
+              />
+            </div>
           </div>
         ) : !lesson.is_free ? (
           <div className="mt-8 rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center">

@@ -25,12 +25,16 @@ export function MediaUpload({
   value,
   onChange,
   cropAspect,
+  allowedTypes,
+  maxSize,
 }: {
   label: string;
   mediaType: MediaType;
   value: string;
   onChange: (url: string) => void;
   cropAspect?: number;
+  allowedTypes?: string[];
+  maxSize?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<UploadStatus>("idle");
@@ -45,15 +49,18 @@ export function MediaUpload({
     if (!file) return;
     setProgress(0);
 
-    if (!acceptedTypes[mediaType].includes(file.type)) {
+    const allowedFileTypes = allowedTypes ?? acceptedTypes[mediaType];
+    const fileLimit = maxSize ?? maxSizes[mediaType];
+
+    if (!allowedFileTypes.includes(file.type)) {
       setStatus("error");
       notifyAdminToast({ message: `Choose a supported ${mediaType} file.`, tone: "error" });
       return;
     }
 
-    if (file.size > maxSizes[mediaType]) {
+    if (file.size > fileLimit) {
       setStatus("error");
-      notifyAdminToast({ message: `${mediaType === "image" ? "Images" : "Videos"} must be smaller than ${mediaType === "image" ? "20 MB" : "5 GB"}.`, tone: "error" });
+      notifyAdminToast({ message: `${mediaType === "image" ? "Images" : "Videos"} must be smaller than ${fileLimit >= 1024 * 1024 ? `${Math.round(fileLimit / (1024 * 1024))} MB` : `${Math.round(fileLimit / 1024)} KB`}.`, tone: "error" });
       return;
     }
 
@@ -167,7 +174,7 @@ export function MediaUpload({
         <input
           ref={inputRef}
           type="file"
-          accept={mediaType === "image" ? "image/jpeg,image/png,image/webp,image/avif,image/gif" : "video/mp4,video/webm,video/quicktime,video/mpeg"}
+          accept={allowedTypes ? allowedTypes.join(",") : mediaType === "image" ? "image/jpeg,image/png,image/webp,image/avif,image/gif" : "video/mp4,video/webm,video/quicktime,video/mpeg"}
           disabled={busy}
           onChange={(event) => void handleSelect(event.target.files?.[0])}
           className="sr-only"
