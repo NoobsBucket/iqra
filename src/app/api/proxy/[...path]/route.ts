@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { UPSTREAM_API_BASE_URL } from "@/lib/api";
 import { createAdminSessionToken, type AdminSessionEnv } from "@/lib/admin-session";
+import { BACKEND_AUTH_COOKIE, getBackendAccessToken } from "@/lib/backend-auth";
 
 function getRuntimeEnv(): AdminSessionEnv {
   try {
@@ -59,6 +60,15 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
         const role = String(user.role ?? user.user_role ?? user.role_name ?? "user").toLowerCase();
         const userId = String(user.id ?? user.uuid ?? user.user_id ?? payload.user_id ?? "");
         const token = await createAdminSessionToken(userId, role, getRuntimeEnv());
+        const backendAccessToken = getBackendAccessToken(payload);
+
+        response.cookies.set(BACKEND_AUTH_COOKIE, backendAccessToken ?? "", {
+          httpOnly: true,
+          secure: req.nextUrl.protocol === "https:",
+          sameSite: "lax",
+          path: "/",
+          maxAge: backendAccessToken ? 60 * 60 * 24 * 7 : 0,
+        });
 
         if (token) {
           response.cookies.set("iqra_session", token, {

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCourseById, getCourseLessons } from "@/lib/api";
@@ -71,25 +70,15 @@ export default async function CourseLessonsPage({
 
                 {selectedLesson.is_free && (selectedLesson.video_url ?? selectedLesson.videoUrl) ? (
                   <div className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-950">
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
-                      {(selectedLesson.thumbnail_url ?? selectedLesson.thumbnailUrl) ? (
-                        <Image src={selectedLesson.thumbnail_url ?? selectedLesson.thumbnailUrl ?? ""} alt={selectedLesson.title} fill className="object-cover opacity-55" sizes="(max-width: 1024px) 100vw, 70vw" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 text-5xl text-white/75">▶</div>
-                      )}
-                      <video
-                        key={selectedLesson.id}
-                        controls
-                        controlsList="nodownload noplaybackrate"
-                        disablePictureInPicture
-                        playsInline
-                        preload="metadata"
-                        poster={selectedLesson.thumbnail_url ?? selectedLesson.thumbnailUrl ?? undefined}
-                        onContextMenu={(event) => event.preventDefault()}
-                        className="relative z-10 aspect-video h-full w-full object-cover"
-                        src={selectedLesson.video_url ?? selectedLesson.videoUrl}
-                      />
-                    </div>
+                    <video
+                      key={selectedLesson.id}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      poster={selectedLesson.thumbnail_url ?? selectedLesson.thumbnailUrl ?? undefined}
+                      className="aspect-video w-full"
+                      src={selectedLesson.video_url ?? selectedLesson.videoUrl}
+                    />
                   </div>
                 ) : !selectedLesson.is_free ? (
                   <div className="mt-8 rounded-[2rem] border border-amber-200 bg-amber-50 p-8 text-center">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { normalizeApiUrl, UPSTREAM_API_BASE_URL } from "@/lib/api";
 import { createAdminSessionToken, type AdminSessionEnv } from "@/lib/admin-session";
+import { BACKEND_AUTH_COOKIE, getBackendAccessToken } from "@/lib/backend-auth";
 
 const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -257,6 +258,14 @@ export async function GET(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7,
       });
     }
+      const backendAccessToken = getBackendAccessToken(saved);
+    response.cookies.set(BACKEND_AUTH_COOKIE, backendAccessToken ?? "", {
+      httpOnly: true,
+      secure: request.nextUrl.protocol === "https:",
+      sameSite: "lax",
+      path: "/",
+      maxAge: backendAccessToken ? 60 * 60 * 24 * 7 : 0,
+    });
 
     return response;
   } catch (oauthError) {

@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BACKEND_AUTH_COOKIE } from "@/lib/backend-auth";
 
 function getUpstreamApiBaseUrl() {
   return (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.iqrainternationalislamicinstitute.com").replace(/\/+$/, "");
 }
 
 async function proxyRequest(request: NextRequest) {
+  const authorization = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const bearerToken = authorization || request.cookies.get(BACKEND_AUTH_COOKIE)?.value;
+  if (!bearerToken) {
+    return NextResponse.json({ error: "Backend login token is missing. Please sign in again." }, { status: 401 });
+  }
+
   const target = new URL("/api/admin/seo", getUpstreamApiBaseUrl());
   const method = request.method;
   const body = method === "GET" || method === "DELETE" ? undefined : await request.text();
@@ -14,6 +21,7 @@ async function proxyRequest(request: NextRequest) {
       method,
       headers: {
         Accept: "application/json",
+        Authorization: `Bearer ${bearerToken}`,
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       body,
