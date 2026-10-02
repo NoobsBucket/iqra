@@ -1,30 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getBlogCategories, getBlogPosts, getSeoPage, getSettings } from "@/lib/api";
+import { getBlogCategories, getBlogPosts } from "@/lib/api";
+import { getSeoMetadata } from "@/lib/seo-metadata";
 import { HeaderNavigationBase } from "../components/application/app-navigation/header-navigation";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [seoRecord, settings] = await Promise.all([getSeoPage("/blog"), getSettings()]);
-  const defaultTitle = settings.default_meta_title ?? "Iqra Journal | Articles on Quran and Islamic Learning";
-  const defaultDescription = settings.default_meta_description ?? "Read reflective articles and practical guidance on Quran study, Islamic knowledge, and living with purpose.";
-  const title = seoRecord?.meta_title ?? defaultTitle;
-  const description = seoRecord?.meta_description ?? defaultDescription;
-  const keywords = seoRecord?.meta_keywords ? seoRecord.meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : settings.default_meta_keywords ? settings.default_meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : ["blog", "islamic articles", "quran learning"];
-
-  return {
-    title,
-    description,
-    keywords,
-    robots: seoRecord?.robots ?? "index,follow",
-    alternates: { canonical: seoRecord?.canonical_url ?? `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://iqrainternationalislamicinstitute.com"}/blog` },
-    openGraph: {
-      title: seoRecord?.og_title ?? title,
-      description: seoRecord?.og_description ?? description,
-      images: seoRecord?.og_image ? [seoRecord.og_image] : undefined,
-    },
-  };
+  return getSeoMetadata("/blog", {
+    title: "Iqra Journal | Articles on Quran and Islamic Learning",
+    description: "Read reflective articles and practical guidance on Quran study, Islamic knowledge, and living with purpose.",
+  });
 }
 
 const navItems = [

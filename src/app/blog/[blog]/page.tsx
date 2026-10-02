@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBlogPost, getSeoPage, getSettings } from "@/lib/api";
+import { getBlogPost, getSeoPage } from "@/lib/api";
+import { parseSeoKeywords } from "@/lib/seo-metadata";
 import { HeaderNavigationBase } from "../../components/application/app-navigation/header-navigation";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,12 @@ const navItems = [
 
 export async function generateMetadata({ params }: { params: Promise<{ blog: string }> }): Promise<Metadata> {
   const { blog } = await params;
-  const [post, seoRecord, settings] = await Promise.all([getBlogPost(blog), getSeoPage(`/blog/${blog}`), getSettings()]);
+  const [post, seoRecord] = await Promise.all([getBlogPost(blog), getSeoPage(`/blog/${blog}`)]);
   const defaultTitle = post?.meta_title ?? post?.title ?? "Blog article";
   const defaultDescription = post?.meta_description ?? post?.excerpt ?? (post?.content ? post.content.slice(0, 160) : "Read the latest insights from Iqra International.");
   const title = post?.meta_title ?? seoRecord?.meta_title ?? defaultTitle;
   const description = post?.meta_description ?? seoRecord?.meta_description ?? defaultDescription;
-  const keywords = post?.meta_keywords ? post.meta_keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean) : seoRecord?.meta_keywords ? seoRecord.meta_keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean) : settings.default_meta_keywords ? settings.default_meta_keywords.split(",").map((keyword) => keyword.trim()).filter(Boolean) : ["blog", "islamic learning"];
+  const keywords = parseSeoKeywords(post?.meta_keywords) ?? parseSeoKeywords(seoRecord?.meta_keywords);
 
   return {
     title,

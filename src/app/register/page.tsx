@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { HeaderNavigationBase } from "../components/application/app-navigation/header-navigation";
 import { RegisterForm } from "../components/register-form";
+import { getSeoMetadata } from "@/lib/seo-metadata";
+
+export async function generateMetadata(): Promise<Metadata> {
+	return getSeoMetadata("/register", {
+		title: "Create Account | Iqra International",
+		description: "Create your Iqra International account and choose an online Quran or Islamic studies course.",
+	});
+}
 
 const navItems = [
 	{ label: "Home", href: "/" },

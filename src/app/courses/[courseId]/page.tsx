@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCourseById, getCourseLessons, getSeoPage, getSettings } from "@/lib/api";
+import { getCourseById, getCourseLessons, getSeoPage } from "@/lib/api";
+import { parseSeoKeywords } from "@/lib/seo-metadata";
 import { LessonCard } from "@/components/lesson-card";
 import { CourseReviews } from "@/components/course-reviews";
 import { HeaderNavigationBase } from "../../components/application/app-navigation/header-navigation";
@@ -18,12 +19,12 @@ const navItems = [
 
 export async function generateMetadata({ params }: { params: Promise<{ courseId: string }> }): Promise<Metadata> {
   const { courseId } = await params;
-  const [course, seoRecord, settings] = await Promise.all([getCourseById(courseId), getSeoPage(`/courses/${courseId}`), getSettings()]);
+  const [course, seoRecord] = await Promise.all([getCourseById(courseId), getSeoPage(`/courses/${courseId}`)]);
   const fallbackTitle = course?.meta_title ?? course?.title ?? "Course";
   const fallbackDescription = course?.meta_description ?? course?.description ?? "Learn with structured, practical guidance.";
   const title = course?.meta_title ?? seoRecord?.meta_title ?? fallbackTitle;
   const description = course?.meta_description ?? seoRecord?.meta_description ?? fallbackDescription;
-  const keywords = course?.meta_keywords ? course.meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : seoRecord?.meta_keywords ? seoRecord.meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : settings.default_meta_keywords ? settings.default_meta_keywords.split(",").map((item) => item.trim()).filter(Boolean) : ["course", "islamic learning"];
+  const keywords = parseSeoKeywords(course?.meta_keywords) ?? parseSeoKeywords(seoRecord?.meta_keywords);
 
   return {
     title,

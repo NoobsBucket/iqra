@@ -563,7 +563,10 @@ export function normalizeSeoRecord(value: unknown): SeoRecord | null {
 
 export async function getSeoPage(path: string): Promise<SeoRecord | null> {
   try {
-    const target = new URL("/api/seo", process.env.API_URL?.trim() || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
+    const target = new URL(
+      "/api/seo",
+      process.env.API_URL?.trim() || process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || UPSTREAM_API_BASE_URL,
+    );
     target.searchParams.set("path", path);
 
     const response = await fetch(target.toString(), {
