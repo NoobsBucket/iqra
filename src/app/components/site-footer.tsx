@@ -2,17 +2,17 @@
 import { useEffect, useState } from "react";
 import { BookOpen, Mail, Phone } from "lucide-react";
 import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
-import { UntitledLogo } from "./foundations/logo/untitledui-logo";
+import { SiteLogo } from "./site-logo";
 
 const links = [
 	{ label: "Courses", href: "/courses" },
-	{ label: "About us", href: "/aboutus" },
 	{ label: "Blog", href: "/blog" },
 	{ label: "Contact", href: "/contactus" },
 ];
 
 export function SiteFooter() {
 	const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
+	const [logoUrl, setLogoUrl] = useState(DEFAULT_SETTINGS.logo_url ?? "");
 	const [footerTagline, setFooterTagline] = useState(DEFAULT_SETTINGS.footer_tagline ?? "Structured Quran and Islamic learning with qualified scholars and a welcoming community.");
 	const [siteEmail, setSiteEmail] = useState(DEFAULT_SETTINGS.site_email ?? "hello@iqrainternational.com");
 	const [sitePhone, setSitePhone] = useState(DEFAULT_SETTINGS.site_phone ?? "+1 (000) 000-0000");
@@ -21,10 +21,11 @@ export function SiteFooter() {
 	useEffect(() => {
 		let isMounted = true;
 
-		getSettings()
+		const loadSettings = () => getSettings()
 			.then((settings) => {
 				if (!isMounted) return;
 				setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
+				setLogoUrl(settings.logo_url ?? "");
 				setFooterTagline(settings.footer_tagline ?? DEFAULT_SETTINGS.footer_tagline ?? "Structured Quran and Islamic learning with qualified scholars and a welcoming community.");
 				setSiteEmail(settings.site_email ?? DEFAULT_SETTINGS.site_email ?? "hello@iqrainternational.com");
 				setSitePhone(settings.site_phone ?? DEFAULT_SETTINGS.site_phone ?? "+1 (000) 000-0000");
@@ -32,8 +33,12 @@ export function SiteFooter() {
 			})
 			.catch(() => undefined);
 
+		void loadSettings();
+		window.addEventListener("iqra-settings-updated", loadSettings);
+
 		return () => {
 			isMounted = false;
+			window.removeEventListener("iqra-settings-updated", loadSettings);
 		};
 	}, []);
 
@@ -42,7 +47,7 @@ export function SiteFooter() {
 			<div className="mx-auto grid max-w-7xl gap-10 px-5 py-12 md:grid-cols-[1.4fr_1fr_1fr] md:px-8 md:py-16">
 				<div>
 					<a href="/" className="inline-flex items-center gap-3 text-white">
-						<UntitledLogo className="h-6 brightness-0 invert" />
+						{logoUrl ? <span className="flex h-12 w-44 items-center rounded-md bg-white px-2"><SiteLogo src={logoUrl} alt={`${siteName} logo`} className="h-10 w-full" /></span> : <SiteLogo alt={`${siteName} logo`} className="h-6 brightness-0 invert" />}
 						<span className="text-lg font-bold tracking-[0.08em] uppercase">{siteName}</span>
 					</a>
 					<p className="mt-5 max-w-sm text-sm leading-7 text-white/65">{footerTagline}</p>

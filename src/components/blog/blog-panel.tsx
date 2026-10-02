@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/app/components/auth-user-provider";
 import { MediaUpload } from "@/app/components/admin/media-upload";
+import { AdminToastViewport } from "@/app/components/admin/admin-toast";
 import { API_BASE_URL, type BlogCategoryRecord, type BlogPostRecord } from "@/lib/api";
 
 const defaultBlogForm = {
@@ -129,6 +130,7 @@ export function BlogPanel() {
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
+        <AdminToastViewport message={message} />
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
@@ -146,12 +148,6 @@ export function BlogPanel() {
               New post
             </button>
           </div>
-
-          {message ? (
-            <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800">
-              {message}
-            </div>
-          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">

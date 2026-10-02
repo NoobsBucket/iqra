@@ -5,7 +5,7 @@ import { SearchLg } from "@untitledui/icons";
 import { TabList, Tabs } from "@/app/components/application/tabs/tabs";
 import { DropdownAccountButton } from "@/app/components/base/dropdown/dropdown-account-button";
 import { Input } from "@/app/components/base/input/input";
-import { UntitledLogo } from "@/app/components/foundations/logo/untitledui-logo";
+import { SiteLogo } from "@/app/components/site-logo";
 import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
 import { cx } from "@/lib/utils/cx";
 import { MobileNavigationHeader } from "./base-components/mobile-header";
@@ -85,20 +85,26 @@ export const HeaderNavigationBase = ({
     secondaryType = "buttons",
 }: HeaderNavigationBaseProps) => {
     const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
+    const [logoUrl, setLogoUrl] = useState(DEFAULT_SETTINGS.logo_url ?? "");
     const isActive = (item: NavItem) => item.current ?? isItemActive(item.href, activeUrl);
 
     useEffect(() => {
         let isMounted = true;
 
-        getSettings()
+        const loadSettings = () => getSettings()
             .then((settings) => {
                 if (!isMounted) return;
                 setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
+                setLogoUrl(settings.logo_url ?? "");
             })
             .catch(() => undefined);
 
+        void loadSettings();
+        window.addEventListener("iqra-settings-updated", loadSettings);
+
         return () => {
             isMounted = false;
+            window.removeEventListener("iqra-settings-updated", loadSettings);
         };
     }, []);
 
@@ -120,10 +126,10 @@ export const HeaderNavigationBase = ({
 
     return (
         <>
-            <MobileNavigationHeader>
+            <MobileNavigationHeader siteName={siteName} logoUrl={logoUrl}>
                 <aside className="flex h-full max-w-full flex-col justify-between overflow-auto bg-white pt-4 text-[#111827]">
                     <div className="flex flex-col gap-5 px-4">
-                        <UntitledLogo className="h-6" />
+                        <SiteLogo src={logoUrl} alt={`${siteName} logo`} className="h-8 w-36" />
 
                         <Input size="md" aria-label="Search" placeholder="Search" icon={SearchLg} />
                     </div>
@@ -148,7 +154,7 @@ export const HeaderNavigationBase = ({
                                 className="rounded-xs outline-focus-ring focus-visible:outline-2 focus-visible:outline-offset-2"
                             >
                                 <div className="flex items-center gap-3">
-                                    <UntitledLogo className="h-6" />
+                                    <SiteLogo src={logoUrl} alt={`${siteName} logo`} className="h-8 w-36" />
                                     <span className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-900">{siteName}</span>
                                 </div>
                             </a>

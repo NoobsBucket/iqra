@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 
 const navItems = [
 	{ label: "Home", href: "/" },
-	{ label: "About", href: "/aboutus" },
 	{ label: "Courses", href: "/courses" },
 	{ label: "Pricing", href: "/pricing" },
 	{ label: "Blog", href: "/blog" },

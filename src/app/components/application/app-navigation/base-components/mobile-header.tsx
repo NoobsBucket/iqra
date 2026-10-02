@@ -1,34 +1,17 @@
 "use client";
 
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { useState, type PropsWithChildren } from "react";
 import { X as CloseIcon, Menu02 } from "@untitledui/icons";
 import { BookOpen, Home, NotebookText, Phone } from "lucide-react";
-import { UntitledLogo } from "@/app/components/foundations/logo/untitledui-logo";
-import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
+import { SiteLogo } from "@/app/components/site-logo";
 
-export const MobileNavigationHeader = ({ children }: PropsWithChildren) => {
+export const MobileNavigationHeader = ({ children, siteName, logoUrl }: PropsWithChildren<{ siteName: string; logoUrl: string }>) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
-
-    useEffect(() => {
-        let isMounted = true;
-
-        getSettings()
-            .then((settings) => {
-                if (!isMounted) return;
-                setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
-            })
-            .catch(() => undefined);
-
-        return () => {
-            isMounted = false;
-        };
-    }, []);
 
     return (
         <>
             <header className="relative flex h-16 items-center justify-center border-b border-[#e5e7eb] bg-white px-4 shadow-[0_1px_0_rgba(17,24,39,0.06)] lg:hidden [font-family:var(--font-jost),sans-serif]">
-                <UntitledLogo className="absolute left-4 h-5" />
+                <SiteLogo src={logoUrl} alt={`${siteName} logo`} className="absolute left-4 h-7 max-w-24" />
                 <span className="text-base font-semibold uppercase tracking-[0.08em] text-[#111827]">{siteName}</span>
             </header>
 

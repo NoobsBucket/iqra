@@ -51,7 +51,6 @@ export function ProductCard({ product }: { product: Product }) {
 	return (
 		<article className={styles.card}>
 			<div className={styles.thumb} style={thumbStyle}>
-				<span aria-hidden="true">{product.emoji ?? "📖"}</span>
 			</div>
 			<div className={styles.body}>
 				<span className={`${styles.level} ${levelClass}`}>{level}</span>

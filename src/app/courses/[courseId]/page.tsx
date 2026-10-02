@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "About", href: "/aboutus" },
   { label: "Courses", href: "/courses" },
   { label: "Pricing", href: "/pricing" },
   { label: "Blog", href: "/blog" },
@@ -47,8 +46,12 @@ export default async function CourseDetailPage({
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <div className="mb-5 flex h-64 items-center justify-center rounded-[2rem] text-6xl shadow-inner" style={{ background: course.thumbBg ?? "linear-gradient(135deg,#E6F4F4,#C5E8E8)" }}>
-                {course.emoji ?? "📖"}
+              <div className="mb-5 overflow-hidden rounded-[2rem] shadow-inner" style={{ background: course.thumbBg ?? "linear-gradient(135deg,#E6F4F4,#C5E8E8)" }}>
+                {course.image_url ? (
+                  <img src={course.image_url} alt={course.title} className="h-64 w-full object-cover" />
+                ) : (
+                  <div className="flex h-64 items-center justify-center text-6xl text-slate-700">{course.emoji ?? "📖"}</div>
+                )}
               </div>
               <h1 className="text-4xl font-black tracking-tight text-slate-900">{course.title}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">{course.description}</p>

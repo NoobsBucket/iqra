@@ -4,7 +4,6 @@ import { RegisterForm } from "../components/register-form";
 
 const navItems = [
 	{ label: "Home", href: "/" },
-	{ label: "About", href: "/aboutus" },
 	{ label: "Courses", href: "/courses" },
 	{ label: "Pricing", href: "/pricing" },
 	{ label: "Blog", href: "/blog" },

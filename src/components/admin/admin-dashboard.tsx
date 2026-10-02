@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/app/components/auth-user-provider";
 import { MediaUpload } from "@/app/components/admin/media-upload";
-import { API_BASE_URL, DEFAULT_SETTINGS, type BlogCategoryRecord, type BlogPostRecord, type CategoryRecord, type ContactMessageRecord, type CourseRecord, type EnrollmentRecord, type LessonRecord, type SettingsRecord, type UserRecord } from "@/lib/api";
+import { AdminToastViewport } from "@/app/components/admin/admin-toast";
+import { API_BASE_URL, DEFAULT_SETTINGS, getSettings, type BlogCategoryRecord, type BlogPostRecord, type CategoryRecord, type ContactMessageRecord, type CourseRecord, type EnrollmentRecord, type LessonRecord, type SettingsRecord, type UserRecord } from "@/lib/api";
 
 const defaultCourseForm = {
   title: "",
@@ -19,6 +20,7 @@ const defaultLessonForm = {
   title: "",
   description: "",
   video_url: "",
+  thumbnail_url: "",
   order_index: "1",
   is_free: "true",
 };
@@ -85,6 +87,11 @@ function asArray<T>(value: T[] | Record<string, unknown> | null | undefined): T[
   return [];
 }
 
+function isStaffUser(user: UserRecord) {
+  const role = user.role?.toLowerCase();
+  return role === "admin" || role === "instructor";
+}
+
 export function AdminDashboard() {
   const authUser = useAuthUser();
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
@@ -103,19 +110,23 @@ export function AdminDashboard() {
   const [blogPosts, setBlogPosts] = useState<BlogPostRecord[]>([]);
   const [blogForm, setBlogForm] = useState(defaultBlogForm);
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [staffCount, setStaffCount] = useState(0);
   const [userSearch, setUserSearch] = useState("");
+  const [userSearchApplied, setUserSearchApplied] = useState(false);
   const [messages, setMessages] = useState<ContactMessageRecord[]>([]);
   const [allEnrollments, setAllEnrollments] = useState<EnrollmentRecord[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string>("");
+  const [settingsSnapshot, setSettingsSnapshot] = useState<SettingsRecord>(defaultSettingsForm);
+  const displayedUsers = userSearchApplied ? users : users.filter(isStaffUser);
 
   const loadData = async () => {
     try {
       const [categoryData, courseData, settingsData, blogCategoryData, blogPostData, userData, messageData, enrollmentData] = await Promise.all([
         apiRequest<CategoryRecord[]>("/v1/categories"),
         apiRequest<CourseRecord[]>("/v1/courses"),
-        apiRequest<SettingsRecord>("/v1/settings").catch(() => ({ ...DEFAULT_SETTINGS })),
+        getSettings(),
         apiRequest<BlogCategoryRecord[]>("/v1/blog/categories").catch(() => []),
         apiRequest<BlogPostRecord[]>("/v1/blog").catch(() => []),
         apiRequest<UserRecord[]>("/v1/users").catch(() => []),
@@ -130,9 +141,12 @@ export function AdminDashboard() {
       setCategories(safeCategories);
       setCourses(safeCourses);
       setSettingsForm(safeSettings);
+      setSettingsSnapshot(safeSettings);
       setBlogCategories(asArray<BlogCategoryRecord>(blogCategoryData));
       setBlogPosts(asArray<BlogPostRecord>(blogPostData));
-      setUsers(asArray<UserRecord>(userData));
+      const safeUsers = asArray<UserRecord>(userData);
+      setUsers(safeUsers);
+      setStaffCount(safeUsers.filter(isStaffUser).length);
       setMessages(asArray<ContactMessageRecord>(messageData));
       setAllEnrollments(asArray<EnrollmentRecord>(enrollmentData));
       setSelectedCourseId((current) => current || safeCourses[0]?.id || "");
@@ -192,9 +206,24 @@ export function AdminDashboard() {
   };
 
   const handleUpdateCategory = async (id: string) => {
+    const category = categories.find((item) => item.id === id);
+    if (!category || selectedCategoryId !== id) {
+      setMessage("Choose Edit for the category before saving changes.");
+      return;
+    }
+
+    const changes: Record<string, unknown> = {};
+    if (categoryForm.name.trim() !== category.name) changes.name = categoryForm.name.trim();
+    if (categoryForm.description.trim() !== category.description) changes.description = categoryForm.description.trim();
+    if (categoryForm.image_url !== (category.image_url ?? "")) changes.image_url = categoryForm.image_url || null;
+    if (Object.keys(changes).length === 0) {
+      setMessage("No category changes to save.");
+      return;
+    }
+
     try {
-      const updated = await apiRequest<CategoryRecord>(`/v1/categories/${id}`, "PATCH", categoryForm);
-      setCategories((current) => current.map((category) => (category.id === id ? updated : category)));
+      const updated = await apiRequest<CategoryRecord>(`/v1/categories/${id}`, "PATCH", changes);
+      setCategories((current) => current.map((item) => (item.id === id ? { ...item, ...updated } : item)));
       setMessage("Category updated successfully.");
     } catch {
       setMessage("Category update failed.");
@@ -259,20 +288,46 @@ export function AdminDashboard() {
   };
 
   const handleUpdateCourse = async (id: string) => {
+    const course = courses.find((item) => item.id === id);
+    if (!course || editingCourseId !== id) {
+      setMessage("Choose Edit for the course before saving changes.");
+      return;
+    }
+
+    const changes: Record<string, unknown> = {};
+    if (courseForm.title.trim() !== course.title) changes.title = courseForm.title.trim();
+    if (courseForm.description.trim() !== course.description) changes.description = courseForm.description.trim();
+    if (courseForm.price !== String(course.price ?? "")) {
+      const price = Number(courseForm.price);
+      if (!courseForm.price.trim() || !Number.isFinite(price)) {
+        setMessage("Enter a valid course price.");
+        return;
+      }
+      changes.price = price;
+    }
+    if (courseForm.discount_price !== String(course.discount_price ?? "")) {
+      const discountPrice = courseForm.discount_price.trim() ? Number(courseForm.discount_price) : null;
+      if (discountPrice !== null && !Number.isFinite(discountPrice)) {
+        setMessage("Enter a valid discount price.");
+        return;
+      }
+      changes.discount_price = discountPrice;
+    }
+    if (courseForm.currency !== (course.currency ?? "USD")) changes.currency = courseForm.currency;
+    if (courseForm.image_url !== (course.image_url ?? course.image ?? "")) changes.image_url = courseForm.image_url || null;
+    const originalCategory = course.category_ids?.[0] ?? course.categoryId ?? course.category_id ?? "";
+    if (courseForm.category_id !== originalCategory) {
+      changes.category_ids = courseForm.category_id ? [courseForm.category_id] : [];
+    }
+    if (Object.keys(changes).length === 0) {
+      setMessage("No course changes to save.");
+      return;
+    }
+
     try {
-      const selectedCategoryId = courseForm.category_id;
+      const updated = await apiRequest<CourseRecord>(`/v1/courses/${id}`, "PATCH", changes);
 
-      const updated = await apiRequest<CourseRecord>(`/v1/courses/${id}`, "PATCH", {
-        title: courseForm.title,
-        description: courseForm.description,
-        price: Number(courseForm.price),
-        discount_price: Number(courseForm.discount_price || 0),
-        currency: courseForm.currency,
-        image_url: courseForm.image_url,
-        category_ids: selectedCategoryId ? [selectedCategoryId] : [],
-      });
-
-      setCourses((current) => current.map((course) => (course.id === id ? updated : course)));
+      setCourses((current) => current.map((item) => (item.id === id ? { ...item, ...updated } : item)));
       setCourseForm(defaultCourseForm);
       setEditingCourseId("");
       setMessage("Course updated successfully.");
@@ -335,6 +390,7 @@ export function AdminDashboard() {
         title: lessonForm.title.trim(),
         description: lessonForm.description.trim(),
         video_url: lessonForm.video_url.trim() || null,
+        thumbnail_url: lessonForm.thumbnail_url.trim() || null,
         order_index: orderIndex,
         is_free: lessonForm.is_free === "true",
       };
@@ -349,22 +405,51 @@ export function AdminDashboard() {
   };
 
   const handleUpdateLesson = async (id: string) => {
-    try {
-      const orderIndex = Number(lessonForm.order_index);
+    const lesson = lessons.find((item) => item.id === id);
+    if (!lesson || selectedLessonId !== id) {
+      setMessage("Choose Edit for the lesson before saving changes.");
+      return;
+    }
 
-      if (!lessonForm.title.trim() || !lessonForm.description.trim() || !Number.isInteger(orderIndex) || orderIndex < 1) {
-        setMessage("Enter a lesson title, description, and a valid order number.");
+    const changes: Record<string, unknown> = {};
+    const title = lessonForm.title.trim();
+    const description = lessonForm.description.trim();
+    const originalVideo = lesson.video_url ?? lesson.videoUrl ?? "";
+    const originalThumbnail = lesson.thumbnail_url ?? lesson.thumbnailUrl ?? "";
+    const orderIndex = Number(lessonForm.order_index);
+
+    if (title !== lesson.title) {
+      if (!title) {
+        setMessage("Lesson title cannot be empty.");
         return;
       }
+      changes.title = title;
+    }
+    if (description !== lesson.description) {
+      if (!description) {
+        setMessage("Lesson description cannot be empty.");
+        return;
+      }
+      changes.description = description;
+    }
+    if (lessonForm.video_url.trim() !== originalVideo) changes.video_url = lessonForm.video_url.trim() || null;
+    if (lessonForm.thumbnail_url !== originalThumbnail) changes.thumbnail_url = lessonForm.thumbnail_url || null;
+    if (lessonForm.order_index !== String(lesson.order_index ?? 1)) {
+      if (!Number.isInteger(orderIndex) || orderIndex < 1) {
+        setMessage("Enter a valid lesson order number.");
+        return;
+      }
+      changes.order_index = orderIndex;
+    }
+    if ((lessonForm.is_free === "true") !== (lesson.is_free ?? true)) changes.is_free = lessonForm.is_free === "true";
+    if (Object.keys(changes).length === 0) {
+      setMessage("No lesson changes to save.");
+      return;
+    }
 
-      const updated = await apiRequest<LessonRecord>(`/v1/lessons/${id}`, "PATCH", {
-        title: lessonForm.title.trim(),
-        description: lessonForm.description.trim(),
-        video_url: lessonForm.video_url.trim() || null,
-        order_index: orderIndex,
-        is_free: lessonForm.is_free === "true",
-      });
-      setLessons((current) => current.map((lesson) => (lesson.id === id ? updated : lesson)));
+    try {
+      const updated = await apiRequest<LessonRecord>(`/v1/lessons/${id}`, "PATCH", changes);
+      setLessons((current) => current.map((item) => (item.id === id ? { ...item, ...updated } : item)));
       setSelectedLessonId("");
       setLessonForm(defaultLessonForm);
       setMessage("Lesson updated successfully.");
@@ -379,6 +464,7 @@ export function AdminDashboard() {
       title: lesson.title,
       description: lesson.description,
       video_url: lesson.video_url ?? "",
+      thumbnail_url: lesson.thumbnail_url ?? lesson.thumbnailUrl ?? "",
       order_index: String(lesson.order_index ?? 1),
       is_free: String(lesson.is_free ?? true),
     });
@@ -399,10 +485,22 @@ export function AdminDashboard() {
   };
 
   const handleUpdateSettings = async () => {
+    const payload = { ...DEFAULT_SETTINGS, ...settingsForm };
+    const hasChanges = Object.entries(payload).some(([key, value]) => {
+      const currentValue = settingsSnapshot[key as keyof SettingsRecord];
+      return String(value ?? "") !== String(currentValue ?? "");
+    });
+
+    if (!hasChanges) {
+      setMessage("No settings changes to save.");
+      return;
+    }
+
     try {
-      const payload = { ...DEFAULT_SETTINGS, ...settingsForm };
-      const updated = await apiRequest<SettingsRecord>("/v1/settings", "PATCH", payload);
-      setSettingsForm({ ...DEFAULT_SETTINGS, ...updated });
+      await apiRequest<unknown>("/v1/settings", "PATCH", payload);
+      setSettingsForm(payload);
+      setSettingsSnapshot(payload);
+      window.dispatchEvent(new Event("iqra-settings-updated"));
       setMessage("Site settings updated successfully.");
     } catch {
       setMessage("Site settings update failed. The PATCH endpoint may be unavailable right now.");
@@ -477,6 +575,7 @@ export function AdminDashboard() {
       const query = userSearch.trim() ? `?search=${encodeURIComponent(userSearch.trim())}` : "";
       const result = await apiRequest<UserRecord[] | Record<string, unknown>>(`/v1/users${query}`);
       setUsers(asArray<UserRecord>(result));
+      setUserSearchApplied(Boolean(query));
     } catch {
       setMessage("User search failed.");
     } finally {
@@ -495,40 +594,41 @@ export function AdminDashboard() {
   };
 
   if (loading) {
-    return <div className="rounded-3xl border border-slate-200 bg-white p-10 text-slate-700">Loading admin dashboard...</div>;
+    return <div className="rounded-xl border border-slate-200 bg-white p-8 text-slate-700">Loading admin dashboard...</div>;
   }
 
   return (
-    <div className="mx-auto max-w-[90rem] space-y-8 px-4 py-10 font-medium text-slate-900 [font-family:var(--font-jost),sans-serif] md:px-8 [&_button]:font-bold [&_h2]:font-bold [&_input]:font-medium [&_select]:font-medium [&_textarea]:font-medium">
-      <div className="relative overflow-hidden rounded-[2rem] border border-[#d9c989]/40 bg-[#102b2a] p-7 text-white shadow-[0_24px_70px_rgba(16,43,42,0.16)] md:p-10">
-        <div className="absolute -right-20 -top-24 size-72 rounded-full border border-[#d9c989]/20" />
+    <div className="mx-auto max-w-[96rem] space-y-6 px-4 py-8 font-medium text-slate-900 [font-family:var(--font-jost),sans-serif] md:px-8 [&_button]:font-bold [&_h2]:font-bold [&_input]:font-medium [&_select]:font-medium [&_textarea]:font-medium">
+      <AdminToastViewport message={message} />
+      <header className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end">
         <div>
-          <p className="relative text-xs font-bold uppercase tracking-[0.28em] text-[#d9c989]">Iqra / Control room</p>
-          <h1 className="relative mt-3 text-4xl font-black tracking-tight md:text-5xl">Manage the learning experience.</h1>
-          <p className="relative mt-3 max-w-2xl text-sm leading-7 text-white/65">Keep your courses, learners, publishing, and conversations moving from one focused workspace.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-800">Iqra / Admin</p>
+          <h1 className="mt-2 text-3xl font-black text-slate-950">Control room</h1>
+          <p className="mt-1 text-sm text-slate-600">Courses, team, publishing, and student activity.</p>
         </div>
-        <div className="relative mt-6 inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white/75 md:absolute md:right-8 md:top-8 md:mt-0">
-          API base: {API_BASE_URL}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+          <div><span className="block text-xs text-slate-500">Courses</span><strong className="text-slate-900">{courses.length}</strong></div>
+          <div><span className="block text-xs text-slate-500">Lessons</span><strong className="text-slate-900">{lessons.length}</strong></div>
+          <div><span className="block text-xs text-slate-500">Staff</span><strong className="text-slate-900">{staffCount}</strong></div>
+          <div><span className="block text-xs text-slate-500">Messages</span><strong className="text-slate-900">{messages.length}</strong></div>
         </div>
-      </div>
-
-      {message ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{message}</div> : null}
+      </header>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(16,43,42,0.07)] md:p-7">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.22em] text-[#9b7d2c]">People</p><h2 className="mt-2 text-2xl font-black">Users</h2></div><span className="rounded-full bg-[#e8f3ed] px-3 py-1 text-sm font-bold text-[#197052]">{users.length} shown</span></div>
-          <div className="mt-5 flex gap-2"><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && searchUsers()} placeholder="Search by name or email" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-[#f8faf8] px-3 py-2.5 outline-none transition focus:border-[#9b7d2c]" /><button onClick={searchUsers} disabled={userSearchLoading} className="rounded-xl bg-[#102b2a] px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{userSearchLoading ? "Searching..." : "Search"}</button></div>
-          <div className="mt-5 space-y-3">{users.map((user) => <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"><div><p className="font-semibold">{user.name ?? user.full_name ?? "Unnamed user"}</p><p className="text-sm text-slate-500">{user.email ?? user.id}</p></div><select value={user.role ?? "user"} onChange={(event) => updateUserRole(user.id, event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"><option value="user">User</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>)}</div>
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-800">People</p><h2 className="mt-1 text-xl font-black">Users</h2></div><span className="text-sm font-semibold text-slate-600">{displayedUsers.length} {userSearchApplied ? "results" : "staff"}</span></div>
+          <div className="mt-4 flex gap-2"><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && searchUsers()} placeholder="Search all users" className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 outline-none transition focus:border-teal-700" /><button onClick={searchUsers} disabled={userSearchLoading} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{userSearchLoading ? "Searching..." : "Search"}</button></div>
+          <div className="mt-4 max-h-[28rem] space-y-2 overflow-y-auto">{displayedUsers.length ? displayedUsers.map((user) => <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3"><div className="min-w-0"><p className="truncate font-semibold">{user.name ?? user.full_name ?? "Unnamed user"}</p><p className="truncate text-sm text-slate-500">{user.email ?? user.id}</p></div><select value={user.role ?? "user"} onChange={(event) => updateUserRole(user.id, event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"><option value="user">User</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>) : <p className="py-8 text-center text-sm text-slate-500">{userSearchApplied ? "No users match this search." : "No admins or instructors found."}</p>}</div>
         </section>
 
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(16,43,42,0.07)] md:p-7">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
           <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.22em] text-[#9b7d2c]">Inbox</p><h2 className="mt-2 text-2xl font-black">Contact messages</h2></div><span className="rounded-full bg-[#e8f3ed] px-3 py-1 text-sm font-bold text-[#197052]">{messages.length}</span></div>
-          <div className="mt-5 max-h-96 space-y-3 overflow-y-auto">{messages.length ? messages.map((item) => <article key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap justify-between gap-2"><p className="font-semibold">{item.subject ?? "Contact request"}</p><span className="text-xs text-slate-500">{item.name}</span></div><p className="mt-2 text-sm text-slate-600">{item.message}</p><p className="mt-2 text-xs text-slate-500">{item.email}{item.phone ? ` · ${item.phone}` : ""}</p></article>) : <p className="py-8 text-center text-sm text-slate-500">No contact messages found.</p>}</div>
+          <div className="mt-5 max-h-96 space-y-2 overflow-y-auto">{messages.length ? messages.map((item) => <article key={item.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap justify-between gap-2"><p className="font-semibold">{item.subject ?? "Contact request"}</p><span className="text-xs text-slate-500">{item.name}</span></div><p className="mt-2 text-sm text-slate-600">{item.message}</p><p className="mt-2 text-xs text-slate-500">{item.email}{item.phone ? ` · ${item.phone}` : ""}</p></article>) : <p className="py-8 text-center text-sm text-slate-500">No contact messages found.</p>}</div>
         </section>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6 xl:col-span-2">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Website settings</h2>
             <button onClick={handleUpdateSettings} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Save settings</button>
@@ -551,7 +651,7 @@ export function AdminDashboard() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6 xl:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold">Blog publishing</h2>
             <button onClick={handleCreateBlogCategory} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Add category</button>
@@ -570,7 +670,7 @@ export function AdminDashboard() {
           <div className="mt-6 space-y-3">{blogPosts.map((post) => <div key={post.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3"><div><p className="font-semibold">{post.title}</p><p className="text-sm text-slate-500">{post.is_published ? "Published" : "Draft"}</p></div><div className="flex gap-2">{!post.is_published && <button onClick={() => handlePublishBlogPost(post.id)} className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">Verify & publish</button>}<button onClick={() => handleDeleteBlogPost(post.id)} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white">Delete</button></div></div>)}</div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
           <h2 className="mb-4 text-xl font-bold">Categories</h2>
           <div className="space-y-3">
             <input value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} placeholder="Category name" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-0" />
@@ -581,7 +681,7 @@ export function AdminDashboard() {
 
           <div className="mt-6 space-y-3">
             {categories.map((category) => (
-              <div key={category.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div key={category.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-900">{category.name}</p>
@@ -598,7 +698,7 @@ export function AdminDashboard() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
           <h2 className="mb-4 text-xl font-bold">Courses</h2>
           <div className="space-y-3">
             <input value={courseForm.title} onChange={(event) => setCourseForm((current) => ({ ...current, title: event.target.value }))} placeholder="Course title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
@@ -631,7 +731,7 @@ export function AdminDashboard() {
 
           <div className="mt-6 space-y-3">
             {courses.map((course) => (
-              <div key={course.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div key={course.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-900">{course.title}</p>
@@ -639,7 +739,6 @@ export function AdminDashboard() {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => editCourse(course)} className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white">Edit</button>
-                    <button onClick={() => handleUpdateCourse(course.id)} className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">Update</button>
                     <button onClick={() => handlePublishCourse(course.id)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white">Publish</button>
                     <button onClick={() => handleDeleteCourse(course.id)} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white">Delete</button>
                   </div>
@@ -650,7 +749,7 @@ export function AdminDashboard() {
         </section>
       </div>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold">Lessons</h2>
@@ -671,11 +770,12 @@ export function AdminDashboard() {
           <textarea value={lessonForm.description} onChange={(event) => setLessonForm((current) => ({ ...current, description: event.target.value }))} placeholder="Lesson description" className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           <div className="grid gap-4 md:grid-cols-2">
             <MediaUpload label="Lesson video" mediaType="video" value={lessonForm.video_url} onChange={(video_url) => setLessonForm((current) => ({ ...current, video_url }))} />
-            <select value={lessonForm.is_free} onChange={(event) => setLessonForm((current) => ({ ...current, is_free: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none">
-              <option value="true">Free lesson</option>
-              <option value="false">Premium lesson</option>
-            </select>
+            <MediaUpload label="Lesson thumbnail" mediaType="image" value={lessonForm.thumbnail_url} cropAspect={16 / 9} onChange={(thumbnail_url) => setLessonForm((current) => ({ ...current, thumbnail_url }))} />
           </div>
+          <select value={lessonForm.is_free} onChange={(event) => setLessonForm((current) => ({ ...current, is_free: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none md:max-w-xs">
+            <option value="true">Free lesson</option>
+            <option value="false">Premium lesson</option>
+          </select>
         </div>
         <div className="mt-4 flex gap-3">
           <button onClick={handleCreateLesson} disabled={!selectedCourseId} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40">Create lesson</button>
@@ -684,17 +784,19 @@ export function AdminDashboard() {
         </div>
 
         <div className="mt-6 space-y-3">
-          {selectedCourseId && lessons.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No lessons found for this course yet.</p> : null}
-          {!selectedCourseId ? <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">Select a course to view its lessons.</p> : null}
+          {selectedCourseId && lessons.length === 0 ? <p className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No lessons found for this course yet.</p> : null}
+          {!selectedCourseId ? <p className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">Select a course to view its lessons.</p> : null}
           {lessons.map((lesson) => (
-            <div key={lesson.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <div>
+            <div key={lesson.id} className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 items-center gap-3">
+                {lesson.thumbnail_url || lesson.thumbnailUrl ? <img src={lesson.thumbnail_url ?? lesson.thumbnailUrl} alt="" className="aspect-video w-28 shrink-0 rounded-md bg-slate-100 object-cover" /> : <div className="flex aspect-video w-28 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs text-slate-500">No image</div>}
+                <div className="min-w-0">
                 <p className="font-semibold text-slate-900">{lesson.title}</p>
-                <p className="text-sm text-slate-600">{lesson.description}</p>
+                <p className="line-clamp-2 text-sm text-slate-600">{lesson.description}</p>
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <button onClick={() => editLesson(lesson)} className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white">Edit</button>
-                <button onClick={() => handleUpdateLesson(lesson.id)} className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">Update</button>
                 <button onClick={() => handleDeleteLesson(lesson.id)} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white">Delete</button>
               </div>
             </div>
@@ -702,7 +804,7 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-bold">Enrollments</h2>

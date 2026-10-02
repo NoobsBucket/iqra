@@ -203,6 +203,23 @@ export const DEFAULT_SETTINGS: SettingsRecord = {
   secondary_color: "#2563eb",
 };
 
+export function normalizeSettings(value: unknown): SettingsRecord {
+  let current = value;
+
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) break;
+    const record = current as Record<string, unknown>;
+    const nested = record.settings ?? record.data;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      current = nested;
+      continue;
+    }
+    return { ...DEFAULT_SETTINGS, ...record } as SettingsRecord;
+  }
+
+  return { ...DEFAULT_SETTINGS };
+}
+
 export type Product = CourseRecord;
 
 function normalizeCategory(item: Partial<CategoryRecord> & Record<string, unknown>): CategoryRecord {
@@ -463,8 +480,8 @@ export async function getNotifications(userId: string): Promise<NotificationReco
 
 export async function getSettings(): Promise<SettingsRecord> {
   try {
-    const settings = await fetchJson<SettingsRecord>("/v1/settings");
-    return { ...DEFAULT_SETTINGS, ...settings };
+    const settings = await fetchJson<unknown>("/v1/settings");
+    return normalizeSettings(settings);
   } catch (err) {
     logApiFailure("getSettings", err);
     return { ...DEFAULT_SETTINGS };
