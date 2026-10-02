@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { UPSTREAM_API_BASE_URL } from "@/lib/api";
+import { createAdminSessionToken, type AdminSessionEnv } from "@/lib/admin-session";
+
+function getRuntimeEnv(): AdminSessionEnv {
+  try {
+    return { ...process.env, ...(getCloudflareContext().env as AdminSessionEnv) };
+  } catch {
+    return process.env as AdminSessionEnv;
+  }
+}
 
 async function proxy(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
@@ -32,6 +42,36 @@ async function proxy(req: NextRequest, { params }: { params: Promise<{ path: str
 
     for (const cookie of upstreamRes.headers.getSetCookie()) {
       response.headers.append("set-cookie", cookie);
+    }
+
+    if (req.method === "POST" && targetPath === "v1/auth/login" && upstreamRes.ok) {
+      response.cookies.set("iqra_session", "", {
+        httpOnly: true,
+        secure: req.nextUrl.protocol === "https:",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+      });
+
+      try {
+        const payload = JSON.parse(text) as Record<string, unknown>;
+        const user = (payload.user ?? payload.data ?? payload) as Record<string, unknown>;
+        const role = String(user.role ?? user.user_role ?? user.role_name ?? "user").toLowerCase();
+        const userId = String(user.id ?? user.uuid ?? user.user_id ?? payload.user_id ?? "");
+        const token = await createAdminSessionToken(userId, role, getRuntimeEnv());
+
+        if (token) {
+          response.cookies.set("iqra_session", token, {
+            httpOnly: true,
+            secure: req.nextUrl.protocol === "https:",
+            sameSite: "lax",
+            path: "/",
+            maxAge: 60 * 60 * 24 * 7,
+          });
+        }
+      } catch {
+        // The upstream response remains usable if it does not contain a JSON user record.
+      }
     }
 
     return response;

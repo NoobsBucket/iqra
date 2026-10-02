@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { normalizeApiUrl, UPSTREAM_API_BASE_URL } from "@/lib/api";
+import { createAdminSessionToken, type AdminSessionEnv } from "@/lib/admin-session";
 
 const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+
+function getRuntimeEnv(): AdminSessionEnv {
+  try {
+    return { ...process.env, ...(getCloudflareContext().env as AdminSessionEnv) };
+  } catch {
+    return process.env as AdminSessionEnv;
+  }
+}
 
 function getRedirectUri(request: NextRequest) {
   const requestRedirectUri = `${request.nextUrl.origin}/api/auth/google`;
@@ -225,10 +235,30 @@ export async function GET(request: NextRequest) {
 
     const secureCookie = request.nextUrl.protocol === "https:" ? "; Secure" : "";
     const escapedUser = JSON.stringify(user).replace(/</g, "\\u003c");
-    return new NextResponse(
+    const response = new NextResponse(
       `<!doctype html><script>const userData=${JSON.stringify(escapedUser)};const parsed=JSON.parse(userData);localStorage.setItem("iqra-user",JSON.stringify(parsed));document.cookie = "iqra-role=" + encodeURIComponent(parsed.role || "user") + "; path=/; SameSite=Lax${secureCookie}";window.dispatchEvent(new Event("iqra-user-changed"));window.location.replace("/");</script>`,
       { headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
+
+    response.cookies.set("iqra_session", "", {
+      httpOnly: true,
+      secure: request.nextUrl.protocol === "https:",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+    const sessionToken = await createAdminSessionToken(user.id, role, getRuntimeEnv());
+    if (sessionToken) {
+      response.cookies.set("iqra_session", sessionToken, {
+        httpOnly: true,
+        secure: request.nextUrl.protocol === "https:",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
+    return response;
   } catch (oauthError) {
     const message = oauthError instanceof Error ? oauthError.message : "Google sign-in failed";
     return NextResponse.redirect(new URL(`/login?oauth_error=${encodeURIComponent(message)}`, request.url));

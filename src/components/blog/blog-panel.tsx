@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/app/components/auth-user-provider";
+import { MediaUpload } from "@/app/components/admin/media-upload";
 import { API_BASE_URL, type BlogCategoryRecord, type BlogPostRecord } from "@/lib/api";
 
 const defaultBlogForm = {
@@ -187,15 +188,9 @@ export function BlogPanel() {
               />
             </label>
 
-            <label className="md:col-span-2 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Cover image URL</span>
-              <input
-                value={form.cover_image}
-                onChange={(event) => setForm((current) => ({ ...current, cover_image: event.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 outline-none focus:border-sky-600"
-                placeholder="https://..."
-              />
-            </label>
+            <div className="md:col-span-2">
+              <MediaUpload label="Cover image" mediaType="image" value={form.cover_image} onChange={(cover_image) => setForm((current) => ({ ...current, cover_image }))} />
+            </div>
 
             <label className="md:col-span-2 block">
               <span className="mb-2 block text-sm font-semibold text-slate-700">Content</span>

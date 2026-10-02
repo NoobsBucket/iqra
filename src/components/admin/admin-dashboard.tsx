@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/app/components/auth-user-provider";
+import { MediaUpload } from "@/app/components/admin/media-upload";
 import { API_BASE_URL, DEFAULT_SETTINGS, type BlogCategoryRecord, type BlogPostRecord, type CategoryRecord, type ContactMessageRecord, type CourseRecord, type EnrollmentRecord, type LessonRecord, type SettingsRecord, type UserRecord } from "@/lib/api";
 
 const defaultCourseForm = {
@@ -544,7 +545,7 @@ export function AdminDashboard() {
             <input value={settingsForm.navbar_announcement ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, navbar_announcement: event.target.value }))} placeholder="Navbar announcement" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.footer_tagline ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, footer_tagline: event.target.value }))} placeholder="Footer tagline" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.footer_copyright ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, footer_copyright: event.target.value }))} placeholder="Footer copyright" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
-            <input value={settingsForm.logo_url ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, logo_url: event.target.value }))} placeholder="Logo image URL" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <div className="md:col-span-2"><MediaUpload label="Site logo" mediaType="image" value={settingsForm.logo_url ?? ""} onChange={(logo_url) => setSettingsForm((current) => ({ ...current, logo_url }))} /></div>
             <input value={settingsForm.primary_color ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, primary_color: event.target.value }))} placeholder="Primary color" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.secondary_color ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, secondary_color: event.target.value }))} placeholder="Secondary color" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           </div>
@@ -560,7 +561,7 @@ export function AdminDashboard() {
             <select value={blogForm.category_id} onChange={(event) => setBlogForm((current) => ({ ...current, category_id: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none"><option value="">Select blog category</option>{blogCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
             <input value={blogForm.excerpt} onChange={(event) => setBlogForm((current) => ({ ...current, excerpt: event.target.value }))} placeholder="Short summary" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none md:col-span-2" />
             <textarea value={blogForm.content} onChange={(event) => setBlogForm((current) => ({ ...current, content: event.target.value }))} placeholder="Full content" className="min-h-40 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none md:col-span-2" />
-            <input value={blogForm.cover_image} onChange={(event) => setBlogForm((current) => ({ ...current, cover_image: event.target.value }))} placeholder="Cover image URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <MediaUpload label="Blog cover image" mediaType="image" value={blogForm.cover_image} onChange={(cover_image) => setBlogForm((current) => ({ ...current, cover_image }))} />
             <input value={blogForm.meta_title} onChange={(event) => setBlogForm((current) => ({ ...current, meta_title: event.target.value }))} placeholder="SEO meta title" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={blogForm.meta_description} onChange={(event) => setBlogForm((current) => ({ ...current, meta_description: event.target.value }))} placeholder="SEO meta description" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={blogForm.meta_keywords} onChange={(event) => setBlogForm((current) => ({ ...current, meta_keywords: event.target.value }))} placeholder="SEO keywords, comma separated" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
@@ -574,7 +575,7 @@ export function AdminDashboard() {
           <div className="space-y-3">
             <input value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} placeholder="Category name" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-0" />
             <textarea value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} placeholder="Description" className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
-            <input value={categoryForm.image_url} onChange={(event) => setCategoryForm((current) => ({ ...current, image_url: event.target.value }))} placeholder="Image URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <MediaUpload label="Category image" mediaType="image" value={categoryForm.image_url} onChange={(image_url) => setCategoryForm((current) => ({ ...current, image_url }))} />
             <button onClick={handleCreateCategory} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">Create category</button>
           </div>
 
@@ -615,7 +616,7 @@ export function AdminDashboard() {
                 ))}
               </select>
             </div>
-            <input value={courseForm.image_url} onChange={(event) => setCourseForm((current) => ({ ...current, image_url: event.target.value }))} placeholder="Course image URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <MediaUpload label="Course image" mediaType="image" value={courseForm.image_url} onChange={(image_url) => setCourseForm((current) => ({ ...current, image_url }))} />
             <div className="flex flex-wrap gap-3">
               <button onClick={() => editingCourseId ? handleUpdateCourse(editingCourseId) : handleCreateCourse()} className="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">{editingCourseId ? "Update course" : "Create course"}</button>
               {editingCourseId ? <button onClick={() => { setEditingCourseId(""); setCourseForm(defaultCourseForm); }} className="rounded-xl border border-slate-200 px-4 py-2 font-semibold text-slate-700">New course</button> : null}
@@ -669,7 +670,7 @@ export function AdminDashboard() {
         <div className="mt-3 space-y-3">
           <textarea value={lessonForm.description} onChange={(event) => setLessonForm((current) => ({ ...current, description: event.target.value }))} placeholder="Lesson description" className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           <div className="grid gap-4 md:grid-cols-2">
-            <input value={lessonForm.video_url} onChange={(event) => setLessonForm((current) => ({ ...current, video_url: event.target.value }))} placeholder="Video URL" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
+            <MediaUpload label="Lesson video" mediaType="video" value={lessonForm.video_url} onChange={(video_url) => setLessonForm((current) => ({ ...current, video_url }))} />
             <select value={lessonForm.is_free} onChange={(event) => setLessonForm((current) => ({ ...current, is_free: event.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none">
               <option value="true">Free lesson</option>
               <option value="false">Premium lesson</option>
