@@ -46,12 +46,12 @@ This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-opti
 
 ## Deploying To Production
 
-| Command                           | Action                                       |
-| :-------------------------------- | :------------------------------------------- |
-| `npm run build`                   | Build your production site                   |
-| `npm run preview`                 | Preview your build locally, before deploying |
-| `npm run build && npm run deploy` | Deploy your production site to Cloudflare    |
-| `npm wrangler tail`               | View real-time logs for all Workers          |
+| Command              | Action                                                    |
+| :------------------- | :-------------------------------------------------------- |
+| `npm run build`      | Build the Next.js app and Cloudflare Worker assets        |
+| `npm run preview`    | Build and preview the Worker locally before deploying    |
+| `npm run deploy`     | Build and deploy your production site to Cloudflare       |
+| `npx wrangler tail`  | View real-time logs for all Workers                       |
 
 ## Admin Media Uploads
 
