@@ -64,6 +64,8 @@ export function BlogPanel() {
 
   const handleSubmit = async () => {
     try {
+      const existingPost = selectedPostId ? blogPosts.find((post) => post.id === selectedPostId) : undefined;
+
       if (!form.title.trim() || !form.content.trim() || !form.category_id) {
         setMessage("Enter a title and content, then select a blog category.");
         return;
@@ -72,6 +74,23 @@ export function BlogPanel() {
       if (!selectedPostId && !authUser?.id) {
         setMessage("You must be signed in to create a blog post.");
         return;
+      }
+
+      if (selectedPostId && existingPost) {
+        const unchanged =
+          form.title === (existingPost.title ?? "") &&
+          form.excerpt === (existingPost.excerpt ?? "") &&
+          form.content === (existingPost.content ?? "") &&
+          form.cover_image === (existingPost.cover_image ?? "") &&
+          form.category_id === (existingPost.category_id ?? "") &&
+          form.meta_title === (existingPost.meta_title ?? "") &&
+          form.meta_description === (existingPost.meta_description ?? "") &&
+          form.meta_keywords === (existingPost.meta_keywords ?? "");
+
+        if (unchanged) {
+          setMessage("No blog post changes to save.");
+          return;
+        }
       }
 
       const payload = {
@@ -87,8 +106,12 @@ export function BlogPanel() {
       };
 
       if (selectedPostId) {
+        if (!existingPost) {
+          setMessage("The selected blog post is no longer available. Reload the list and try again.");
+          return;
+        }
         const updated = await apiRequest<BlogPostRecord>(`/v1/blog/${selectedPostId}`, "PATCH", payload);
-        setBlogPosts((current) => current.map((post) => (post.id === selectedPostId ? updated : post)));
+        setBlogPosts((current) => current.map((post) => (post.id === selectedPostId ? { ...post, ...updated } : post)));
         setMessage("Blog post updated successfully.");
       } else {
         const created = await apiRequest<BlogPostRecord>("/v1/blog", "POST", payload);

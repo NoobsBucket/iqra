@@ -67,12 +67,10 @@ export default function Home() {
 			<HeaderNavigationBase items={navItems} activeUrl="/" />
 			<Hero />
 			<CategoryRender limit={6} />
+			<RandomHadith offset={0} />
 			<FeaturedCourse />
 			<RandomLessons />
-			<RandomHadith offset={0} />
-			<LearningHighlights />
 			<RandomHadith offset={1} showHeadline={false} />
-			<LearningPaths />
 		</div>
 	);
 }

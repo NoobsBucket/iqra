@@ -228,7 +228,13 @@ export function AdminDashboard() {
     }
 
     try {
-      const updated = await apiRequest<CategoryRecord>(`/v1/categories/${id}`, "PATCH", changes);
+      const payload = {
+        name: category.name,
+        description: category.description,
+        image_url: category.image_url ?? null,
+        ...changes,
+      };
+      const updated = await apiRequest<CategoryRecord>(`/v1/categories/${id}`, "PATCH", payload);
       setCategories((current) => current.map((item) => (item.id === id ? { ...item, ...updated } : item)));
       setMessage("Category updated successfully.");
     } catch {
@@ -337,7 +343,20 @@ export function AdminDashboard() {
     }
 
     try {
-      const updated = await apiRequest<CourseRecord>(`/v1/courses/${id}`, "PATCH", changes);
+      const payload = {
+        title: course.title,
+        description: course.description,
+        price: course.price,
+        discount_price: course.discount_price ?? null,
+        currency: course.currency ?? "USD",
+        image_url: course.image_url ?? course.image ?? null,
+        category_ids: course.category_ids ?? [course.categoryId ?? course.category_id].filter(Boolean),
+        meta_title: course.meta_title ?? null,
+        meta_description: course.meta_description ?? null,
+        meta_keywords: course.meta_keywords ?? null,
+        ...changes,
+      };
+      const updated = await apiRequest<CourseRecord>(`/v1/courses/${id}`, "PATCH", payload);
 
       setCourses((current) => current.map((item) => (item.id === id ? { ...item, ...updated } : item)));
       setCourseForm(defaultCourseForm);
@@ -463,7 +482,16 @@ export function AdminDashboard() {
     }
 
     try {
-      const updated = await apiRequest<LessonRecord>(`/v1/lessons/${id}`, "PATCH", changes);
+      const payload = {
+        title: lesson.title,
+        description: lesson.description,
+        video_url: originalVideo || null,
+        thumbnail_url: originalThumbnail || null,
+        order_index: lesson.order_index ?? 1,
+        is_free: lesson.is_free ?? true,
+        ...changes,
+      };
+      const updated = await apiRequest<LessonRecord>(`/v1/lessons/${id}`, "PATCH", payload);
       setLessons((current) => current.map((item) => (item.id === id ? { ...item, ...updated } : item)));
       setSelectedLessonId("");
       setLessonForm(defaultLessonForm);
