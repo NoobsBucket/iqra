@@ -52,6 +52,28 @@ const emptyForm: SeoForm = {
 
 const robotOptions = ["index,follow", "index,nofollow", "noindex,nofollow", "noindex,follow"];
 
+function normalizePagePath(path: string) {
+  const collapsed = path.trim().replace(/\/{2,}/g, "/");
+  const withLeadingSlash = collapsed.startsWith("/") ? collapsed : `/${collapsed}`;
+  return withLeadingSlash.length > 1 ? withLeadingSlash.replace(/\/+$/, "") : withLeadingSlash;
+}
+
+function toSeoForm(row: SeoRow): SeoForm {
+  return {
+    page_name: row.page_name ?? "",
+    page_path: row.page_path ?? "",
+    meta_title: row.meta_title ?? "",
+    meta_description: row.meta_description ?? "",
+    meta_keywords: row.meta_keywords ?? "",
+    og_title: row.og_title ?? "",
+    og_description: row.og_description ?? "",
+    og_image: row.og_image ?? "",
+    canonical_url: row.canonical_url ?? "",
+    robots: row.robots ?? "index,follow",
+    json_ld: typeof row.json_ld === "string" ? row.json_ld : row.json_ld ? JSON.stringify(row.json_ld, null, 2) : "",
+  };
+}
+
 export function SeoSettingsDashboard() {
   const authUser = useAuthUser();
   const [rows, setRows] = useState<SeoRow[]>([]);
@@ -107,6 +129,39 @@ export function SeoSettingsDashboard() {
       return;
     }
 
+    const normalizedPagePath = normalizePagePath(form.page_path);
+    const duplicate = rows.find((row) =>
+      row.id !== selectedId && normalizePagePath(row.page_path ?? "") === normalizedPagePath
+    );
+    if (duplicate) {
+      if (duplicate.id) {
+        const existingForm = toSeoForm(duplicate);
+        setSelectedId(duplicate.id);
+        setForm({
+          ...existingForm,
+          page_name: form.page_name.trim() || existingForm.page_name,
+          page_path: normalizePagePath(duplicate.page_path ?? normalizedPagePath),
+          meta_title: form.meta_title.trim() || existingForm.meta_title,
+          meta_description: form.meta_description.trim() || existingForm.meta_description,
+          meta_keywords: form.meta_keywords.trim() || existingForm.meta_keywords,
+          og_title: form.og_title.trim() || existingForm.og_title,
+          og_description: form.og_description.trim() || existingForm.og_description,
+          og_image: form.og_image.trim() || existingForm.og_image,
+          canonical_url: form.canonical_url.trim() || existingForm.canonical_url,
+          robots: form.robots === emptyForm.robots ? existingForm.robots : form.robots,
+          json_ld: form.json_ld.trim() || existingForm.json_ld,
+        });
+        const duplicateMessage = `The path ${normalizedPagePath} already exists. Its record is open for editing.`;
+        setMessage(duplicateMessage);
+        notifyAdminToast({ message: duplicateMessage, tone: "info" });
+      } else {
+        const duplicateMessage = `The path ${normalizedPagePath} already exists. Refresh the page list and edit its existing record.`;
+        setMessage(duplicateMessage);
+        notifyAdminToast({ message: duplicateMessage, tone: "error" });
+      }
+      return;
+    }
+
     if (metaTitleChars > 70) {
       setMessage("Meta title must stay within 70 characters.");
       notifyAdminToast({ message: "Meta title must stay within 70 characters.", tone: "error" });
@@ -133,7 +188,7 @@ export function SeoSettingsDashboard() {
     try {
       const payload = {
         page_name: form.page_name.trim(),
-        page_path: form.page_path.trim(),
+        page_path: normalizedPagePath,
         meta_title: form.meta_title.trim() || null,
         meta_description: form.meta_description.trim() || null,
         meta_keywords: form.meta_keywords.trim() || null,
@@ -158,6 +213,13 @@ export function SeoSettingsDashboard() {
           : typeof errorPayload.message === "string"
             ? errorPayload.message
             : `Request failed: ${response.status}`;
+        if (response.status === 409 || /already exists|duplicate/i.test(errorMessage)) {
+          const duplicateMessage = `The path ${normalizedPagePath} already exists. Refresh the page list and edit its existing record.`;
+          setMessage(duplicateMessage);
+          notifyAdminToast({ message: duplicateMessage, tone: "error" });
+          void loadPages();
+          return;
+        }
         throw new Error(errorMessage);
       }
 
@@ -205,19 +267,7 @@ export function SeoSettingsDashboard() {
 
   const startEditing = (row: SeoRow) => {
     setSelectedId(row.id ?? null);
-    setForm({
-      page_name: row.page_name ?? "",
-      page_path: row.page_path ?? "",
-      meta_title: row.meta_title ?? "",
-      meta_description: row.meta_description ?? "",
-      meta_keywords: row.meta_keywords ?? "",
-      og_title: row.og_title ?? "",
-      og_description: row.og_description ?? "",
-      og_image: row.og_image ?? "",
-      canonical_url: row.canonical_url ?? "",
-      robots: row.robots ?? "index,follow",
-      json_ld: typeof row.json_ld === "string" ? row.json_ld : row.json_ld ? JSON.stringify(row.json_ld, null, 2) : "",
-    });
+    setForm(toSeoForm(row));
   };
 
   const titlePreview = form.meta_title.trim() || form.page_name.trim() || "Page title";

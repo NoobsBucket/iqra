@@ -7,6 +7,7 @@ import { DropdownAccountButton } from "@/app/components/base/dropdown/dropdown-a
 import { Input } from "@/app/components/base/input/input";
 import { SiteLogo } from "@/app/components/site-logo";
 import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
+import { SITE_LOGO_URL } from "@/lib/site-brand";
 import { cx } from "@/lib/utils/cx";
 import { MobileNavigationHeader } from "./base-components/mobile-header";
 import { NavAccountCard } from "./base-components/nav-account-card";
@@ -85,7 +86,7 @@ export const HeaderNavigationBase = ({
     secondaryType = "buttons",
 }: HeaderNavigationBaseProps) => {
     const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
-    const [logoUrl, setLogoUrl] = useState(DEFAULT_SETTINGS.logo_url ?? "");
+    const [logoUrl, setLogoUrl] = useState(SITE_LOGO_URL || DEFAULT_SETTINGS.logo_url || "");
     const isActive = (item: NavItem) => item.current ?? isItemActive(item.href, activeUrl);
 
     useEffect(() => {
@@ -100,7 +101,7 @@ export const HeaderNavigationBase = ({
             }
         })();
 
-        if (cachedBrand?.logoUrl) {
+        if (!SITE_LOGO_URL && cachedBrand?.logoUrl) {
             setLogoUrl(cachedBrand.logoUrl);
         }
 
@@ -108,7 +109,7 @@ export const HeaderNavigationBase = ({
             .then((settings) => {
                 if (!isMounted) return;
                 setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
-                const nextLogoUrl = settings.logo_url ?? settings.logoUrl ?? "";
+                const nextLogoUrl = SITE_LOGO_URL || settings.logo_url || settings.logoUrl || "";
                 setLogoUrl(nextLogoUrl);
             })
             .catch(() => undefined);

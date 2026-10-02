@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { getSettings } from "@/lib/api";
+import { SITE_LOGO_URL } from "@/lib/site-brand";
 
 const BRAND_STORAGE_KEY = "iqra-site-brand-cache";
 
@@ -66,13 +67,13 @@ export function SiteBrandAssets() {
 
     const updateIcon = async () => {
       const cached = readCachedBrand();
-      if (cached?.logoUrl && active) {
+      if (!SITE_LOGO_URL && cached?.logoUrl && active) {
         applyIcon(cached.logoUrl);
       }
 
       try {
         const settings = await getSettings();
-        const logoUrl = settings.logo_url?.trim();
+        const logoUrl = SITE_LOGO_URL || settings.logo_url?.trim();
         if (!active) return;
         applyIcon(logoUrl);
       } catch {

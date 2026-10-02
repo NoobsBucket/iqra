@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteFooter } from "./components/site-footer";
 import { SiteBrandAssets } from "./components/site-brand-assets";
 import { AuthUserProvider } from "./components/auth-user-provider";
+import { SITE_LOGO_URL } from "@/lib/site-brand";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -24,6 +25,7 @@ const jost = Jost({
 export const metadata: Metadata = {
 	title: "Iqra international",
 	description: "Learn Quranic and Islamic studies through structured online courses.",
+	icons: SITE_LOGO_URL ? { icon: SITE_LOGO_URL, shortcut: SITE_LOGO_URL } : undefined,
 };
 
 export default function RootLayout({

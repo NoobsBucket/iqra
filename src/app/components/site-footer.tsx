@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { BookOpen, Mail, Phone } from "lucide-react";
 import { DEFAULT_SETTINGS, getSettings } from "@/lib/api";
+import { SITE_LOGO_URL } from "@/lib/site-brand";
 import { SiteLogo } from "./site-logo";
 
 const links = [
@@ -12,7 +13,7 @@ const links = [
 
 export function SiteFooter() {
 	const [siteName, setSiteName] = useState(DEFAULT_SETTINGS.site_name ?? "Iqra International");
-	const [logoUrl, setLogoUrl] = useState(DEFAULT_SETTINGS.logo_url ?? "");
+	const [logoUrl, setLogoUrl] = useState(SITE_LOGO_URL || DEFAULT_SETTINGS.logo_url || "");
 	const [footerTagline, setFooterTagline] = useState(DEFAULT_SETTINGS.footer_tagline ?? "Structured Quran and Islamic learning with qualified scholars and a welcoming community.");
 	const [siteEmail, setSiteEmail] = useState(DEFAULT_SETTINGS.site_email ?? "hello@iqrainternational.com");
 	const [sitePhone, setSitePhone] = useState(DEFAULT_SETTINGS.site_phone ?? "+1 (000) 000-0000");
@@ -30,7 +31,7 @@ export function SiteFooter() {
 			}
 		})();
 
-		if (cachedBrand?.logoUrl) {
+		if (!SITE_LOGO_URL && cachedBrand?.logoUrl) {
 			setLogoUrl(cachedBrand.logoUrl);
 		}
 
@@ -38,7 +39,7 @@ export function SiteFooter() {
 			.then((settings) => {
 				if (!isMounted) return;
 				setSiteName(settings.site_name ?? DEFAULT_SETTINGS.site_name ?? "Iqra International");
-				const nextLogoUrl = settings.logo_url ?? settings.logoUrl ?? "";
+				const nextLogoUrl = SITE_LOGO_URL || settings.logo_url || settings.logoUrl || "";
 				setLogoUrl(nextLogoUrl);
 				setFooterTagline(settings.footer_tagline ?? DEFAULT_SETTINGS.footer_tagline ?? "Structured Quran and Islamic learning with qualified scholars and a welcoming community.");
 				setSiteEmail(settings.site_email ?? DEFAULT_SETTINGS.site_email ?? "hello@iqrainternational.com");

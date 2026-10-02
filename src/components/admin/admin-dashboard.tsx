@@ -5,6 +5,7 @@ import { useAuthUser } from "@/app/components/auth-user-provider";
 import { MediaUpload } from "@/app/components/admin/media-upload";
 import { AdminToastViewport } from "@/app/components/admin/admin-toast";
 import { API_BASE_URL, DEFAULT_SETTINGS, getSettings, type BlogCategoryRecord, type BlogPostRecord, type CategoryRecord, type ContactMessageRecord, type CourseRecord, type EnrollmentRecord, type LessonRecord, type SettingsRecord, type UserRecord } from "@/lib/api";
+import { SITE_LOGO_URL } from "@/lib/site-brand";
 
 const defaultCourseForm = {
   title: "",
@@ -692,7 +693,16 @@ export function AdminDashboard() {
             <input value={settingsForm.navbar_announcement ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, navbar_announcement: event.target.value }))} placeholder="Navbar announcement" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.footer_tagline ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, footer_tagline: event.target.value }))} placeholder="Footer tagline" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.footer_copyright ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, footer_copyright: event.target.value }))} placeholder="Footer copyright" className="md:col-span-2 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
-            <div className="md:col-span-2"><MediaUpload label="Site logo" mediaType="image" value={settingsForm.logo_url ?? ""} onChange={(logo_url) => setSettingsForm((current) => ({ ...current, logo_url }))} /></div>
+            <div className="md:col-span-2">
+              {SITE_LOGO_URL ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-700">Site logo from NEXT_PUBLIC_SITE_LOGO_URL</p>
+                  <img src={SITE_LOGO_URL} alt="Configured site logo preview" className="h-16 max-w-52 object-contain" />
+                </div>
+              ) : (
+                <MediaUpload label="Site logo" mediaType="image" value={settingsForm.logo_url ?? ""} onChange={(logo_url) => setSettingsForm((current) => ({ ...current, logo_url }))} />
+              )}
+            </div>
             <input value={settingsForm.primary_color ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, primary_color: event.target.value }))} placeholder="Primary color" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
             <input value={settingsForm.secondary_color ?? ""} onChange={(event) => setSettingsForm((current) => ({ ...current, secondary_color: event.target.value }))} placeholder="Secondary color" className="w-full rounded-xl border border-slate-200 px-3 py-2 outline-none" />
           </div>

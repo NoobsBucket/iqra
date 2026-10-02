@@ -1,0 +1,1 @@
+export const SITE_LOGO_URL = process.env.NEXT_PUBLIC_SITE_LOGO_URL?.trim() ?? "";
